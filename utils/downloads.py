@@ -39,6 +39,7 @@ def download(url: str, format: str = "mp4", bot: Optional[Fishie] = None):
 
     if TIKTOK_RE.search(video):
         options["format_sort"] = ["vcodec:h264"]
+        options["cookies"] = r"tiktok-cookies.txt"
 
     if SOUNDCLOUD_RE.search(video) or format == "mp3":
         format = "mp3"
@@ -57,6 +58,9 @@ def download(url: str, format: str = "mp4", bot: Optional[Fishie] = None):
                 "when": "after_move",
             }
         ]
+    
+    if INSTAGRAM_RE.search(video):
+        options["cookies"] = r"instagram-cookies.txt"
 
     if audio:
         options.setdefault("postprocessors", []).append(
