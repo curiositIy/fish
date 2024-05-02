@@ -20,7 +20,7 @@ class User(Cog):
         if before_u.name == after_u.name:
             return
 
-        if "username" in await self.bot.redis.smembers(f"opted_out:{after_u.id}"):
+        if "username" in self.bot.db_cache.get_opted_out(after_u.id):
             return
 
         await self.add_username(after_u)
@@ -40,7 +40,7 @@ class User(Cog):
         if before_u.display_name == after_u.display_name:
             return
 
-        if "display" in await self.bot.redis.smembers(f"opted_out:{after_u.id}"):
+        if "display" in self.bot.db_cache.get_opted_out(after_u.id):
             return
 
         await self.add_display_name(after_u)
@@ -63,7 +63,7 @@ class User(Cog):
         if not after_m.nick:
             return
 
-        if "nickname" in await self.bot.redis.smembers(f"opted_out:{after_m.id}"):
+        if "nickname" in self.bot.db_cache.get_opted_out(after_m.id):
             return
 
         await self.add_nickname(after_m)
@@ -83,7 +83,7 @@ class User(Cog):
         if before_m.status == after_m.status:
             return
 
-        if "status" in await self.bot.redis.smembers(f"opted_out:{after_m.id}"):
+        if "status" in self.bot.db_cache.get_opted_out(after_m.id):
             return
 
         await self.add_status(after_m)
@@ -100,7 +100,7 @@ class User(Cog):
 
     @commands.Cog.listener("on_member_join")
     async def member_join_logs(self, member: discord.Member):
-        if "joins" in await self.bot.redis.smembers(f"opted_out:{member.id}"):
+        if "joins" in self.bot.db_cache.get_opted_out(member.id):
             return
 
         await self.add_join(member)

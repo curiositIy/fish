@@ -20,9 +20,7 @@ class AutoDownload(Cog):
 
     @commands.Cog.listener("on_message")
     async def auto_download(self, message: discord.Message):
-        if str(message.channel.id) not in await self.bot.redis.smembers(
-            "auto_downloads"
-        ):  # type: ignore
+        if message.channel.id not in self.bot.db_cache.auto_downloads:
             return
 
         if message.author.bot:

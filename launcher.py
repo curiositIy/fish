@@ -6,10 +6,11 @@ import sys
 import tomllib
 
 import aiohttp
-from redis import asyncio as aioredis
-
+from discord import gateway
 from core import Fishie
-from utils import Config, base_header, create_pool
+from utils import Config, base_header, create_pool, identify_mobile
+
+gateway.DiscordWebSocket.identify = identify_mobile
 
 
 async def start(testing: bool):
@@ -52,20 +53,12 @@ async def start(testing: bool):
     pool = await create_pool(config["databases"]["psql_testing" if testing else "psql"])
     logger.info("Connected to Postgres")
 
-    redis = await aioredis.from_url(
-        config["databases"]["redis_testing" if testing else "redis"],
-        encoding="utf-8",
-        decode_responses=True,
-    )
-    logger.info("Connected to Redis")
-
     async with (
         aiohttp.ClientSession(headers=base_header) as session,
         Fishie(
             config=config, logger=logger, pool=pool, session=session, testing=testing
         ) as bot,
     ):
-        bot.redis = redis
         await bot.start(
             config["tokens"]["testing_bot"] if testing else config["tokens"]["bot"]
         )

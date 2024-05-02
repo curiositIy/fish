@@ -44,7 +44,7 @@ class Pokemon(Cog):
         if message.guild is None:
             return
 
-        if str(message.guild.id) not in await self.bot.redis.smembers("poketwo_guilds"):
+        if message.guild.id not in self.bot.db_cache.poketwo_guilds:
             return
 
         try:

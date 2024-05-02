@@ -20,9 +20,6 @@ dagpi = ""
 psql = ""
 psql_testing = ""
 
-redis = ""
-redis_testing = ""
-
 [twitter]
 username = ""
 password = ""

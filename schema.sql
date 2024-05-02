@@ -193,3 +193,17 @@ CREATE TABLE IF NOT EXISTS message_xp (
     xp BIGINT,
     PRIMARY KEY (user_id)  
 );
+
+CREATE TABLE IF NOT EXISTS user_rep (
+    id SERIAL,
+    user_id BIGINT,
+    count INT
+);
+
+CREATE TABLE IF NOT EXISTS user_rep_logs (
+    id SERIAL,
+    user_id BIGINT,
+    author_id BIGINT,
+    value BOOLEAN,
+    comment TEXT
+);

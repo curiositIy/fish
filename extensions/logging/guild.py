@@ -63,7 +63,7 @@ class Guild(Cog):
         if before_g.icon and before_g.icon == after_g.icon:
             return
 
-        if "icon" in await self.bot.redis.smembers(f"guild_opted_out:{after_g.id}"):
+        if "icon" in self.bot.db_cache.get_opted_out(after_g.id):
             return
 
         await self.add_icon(after_g, after_g.icon)
@@ -80,7 +80,7 @@ class Guild(Cog):
         if before_g.name == after_g.name:
             return
 
-        if "name" in await self.bot.redis.smembers(f"guild_opted_out:{after_g.id}"):
+        if "name" in self.bot.db_cache.get_opted_out(after_g.id):
             return
 
         await self.add_name(after_g)

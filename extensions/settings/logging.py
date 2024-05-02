@@ -57,13 +57,13 @@ class Dropdown(discord.ui.Select):
         value = self.values[0]
         ctx = self.ctx
 
-        results = await ctx.bot.redis.smembers(f"opted_out:{ctx.author.id}")
+        results = ctx.bot.db_cache.opted_out[ctx.author.id]
 
         if value in results:
             sql = """UPDATE opted_out SET items = array_remove(opted_out.items, $1) WHERE user_id = $2"""
 
             await ctx.bot.pool.execute(sql, value, ctx.author.id)
-            await ctx.bot.redis.srem(f"opted_out:{ctx.author.id}", value)
+            results.remove(value)
             emoji = "\U0001f7e2"
         else:
             sql = """
@@ -74,7 +74,7 @@ class Dropdown(discord.ui.Select):
             """
 
             await ctx.bot.pool.execute(sql, ctx.author.id, value)
-            await ctx.bot.redis.sadd(f"opted_out:{ctx.author.id}", value)
+            results.append(value)
             emoji = "\U0001f534"
 
         self.data.update({value: [self.data[value][0], emoji]})
@@ -82,15 +82,17 @@ class Dropdown(discord.ui.Select):
 
     async def guild_opt(self):
         value = self.values[0]
-        ctx = self.ctx
+        ctx: GuildContext = self.ctx  # type: ignore
+        if self.guild_id is None:
+            raise ValueError("Not in a guild")
 
-        results = await ctx.bot.redis.smembers(f"guild_opted_out:{self.guild_id}")
+        results = ctx.bot.db_cache.opted_out[self.guild_id]
 
         if value in results:
             sql = """UPDATE guild_opted_out SET items = array_remove(guild_opted_out.items, $1) WHERE guild_id = $2"""
 
             await ctx.bot.pool.execute(sql, value, self.guild_id)
-            await ctx.bot.redis.srem(f"guild_opted_out:{self.guild_id}", value)
+            ctx.bot.db_cache.remove_opt_out(self.guild_id, value)
             emoji = "\U0001f7e2"
         else:
             sql = """
@@ -101,7 +103,7 @@ class Dropdown(discord.ui.Select):
             """
 
             await ctx.bot.pool.execute(sql, self.guild_id, value)
-            await ctx.bot.redis.sadd(f"guild_opted_out:{self.guild_id}", value)
+            ctx.bot.db_cache.add_opt_out(self.guild_id, value)
             emoji = "\U0001f534"
 
         self.data.update({value: [self.data[value][0], emoji]})

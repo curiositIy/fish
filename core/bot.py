@@ -26,9 +26,9 @@ import discord
 from cachetools import TTLCache
 from discord.abc import Messageable
 from discord.ext import commands
-from redis import asyncio as aioredis
 
 from utils import MESSAGE_RE, Config, EmojiInputType, Emojis, update_pokemon
+from .cache import db_cache
 
 if TYPE_CHECKING:
     from extensions.context import Context
@@ -49,7 +49,10 @@ async def get_prefix(bot: Fishie, message: discord.Message) -> List[str]:
     if message.guild is None:
         return commands.when_mentioned_or(*default)(bot, message)
 
-    prefixes = await bot.redis.smembers(f"prefixes:{message.guild.id}")
+    try:
+        prefixes = bot.db_cache.prefixes[message.guild.id]
+    except:  # SHUT UP
+        prefixes = []
 
     packed = default + list(prefixes)
 
@@ -63,7 +66,6 @@ async def get_prefix(bot: Fishie, message: discord.Message) -> List[str]:
 
 
 class Fishie(commands.Bot):
-    redis: aioredis.Redis[Any]
     custom_emojis = Emojis()
     cached_covers: Dict[str, Tuple[str, bool]] = {}
     pokemon: List[str]
@@ -78,6 +80,7 @@ class Fishie(commands.Bot):
         testing: bool = False,
     ):
         self.config: Config = config
+        self.db_cache = db_cache()
         self.logger: Logger = logger
         self.pool = pool
         self.session = session
@@ -255,8 +258,6 @@ class Fishie(commands.Bot):
     async def close_sessions(self):
         await self.pool.close()
         self.logger.info("Closed Postgres session")
-        await self.redis.close()
-        self.logger.info("Closed Redis session")
         await self.session.close()
         self.logger.info("Closed aiohttp session")
 
@@ -266,21 +267,22 @@ class Fishie(commands.Bot):
         for record in prefixes:
             guild_id = record["guild_id"]
             prefix = record["prefix"]
-            await self.redis.sadd(f"prefixes:{guild_id}", prefix)
+            self.db_cache.add_prefix(guild_id, prefix)
             self.logger.info(f'Added prefix "{prefix}" to "{guild_id}"')
 
         opted_out = await self.pool.fetch("SELECT * FROM opted_out")
         for row in opted_out:
             for item in row["items"]:
                 user_id = row["user_id"]
-                await self.redis.sadd(f"opted_out:{user_id}", item)
+                self.db_cache.add_opt_out(user_id, item)
+
                 self.logger.info(f'Added "{item}" to opted out for user "{user_id}"')
 
         guild_opted_out = await self.pool.fetch("SELECT * FROM guild_opted_out")
         for row in guild_opted_out:
             for item in row["items"]:
                 guild_id = row["guild_id"]
-                await self.redis.sadd(f"guild_opted_out:{guild_id}", item)
+                self.db_cache.add_opt_out(guild_id, item)
                 self.logger.info(f'Added "{item}" to opted out for guild "{guild_id}"')
 
         guild_settings = await self.pool.fetch("SELECT * FROM guild_settings")
@@ -291,17 +293,17 @@ class Fishie(commands.Bot):
             auto_reactions = row["auto_reactions"]
 
             if adl:
-                await self.redis.sadd("auto_downloads", adl)
+                self.db_cache.add_adl(guild_id)
                 self.logger.info(
                     f'Added auto download channel "{adl}" to guild "{guild_id}"'
                 )
 
             if poketwo:
-                await self.redis.sadd("poketwo_guilds", guild_id)
+                self.db_cache.add_poketwo(guild_id)
                 self.logger.info(f'Added auto poketwo solving to guild "{guild_id}"')
 
             if auto_reactions:
-                await self.redis.sadd("auto_reactions_guilds", guild_id)
+                self.db_cache.add_reaction_guilds(guild_id)
                 self.logger.info(f'Added auto media reactions to guild "{guild_id}"')
 
     async def add_reactions(

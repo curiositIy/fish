@@ -4,7 +4,6 @@ discord
 isort
 black
 asyncpg
-redis>=4.2.0rc1
 asyncpg-stubs
 yt-dlp
 python-dateutil

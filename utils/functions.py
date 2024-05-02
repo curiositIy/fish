@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+import sys
 import textwrap
 from io import BytesIO
 from typing import (
@@ -140,7 +141,7 @@ async def get_sp_cover(bot: Fishie, query: str) -> Tuple[str, bool]:
 
     try:
         cover = results["albums"]["items"][0]["images"][0]["url"]
-        nsfw = results["albums"]["items"][0]["id"] in await bot.redis.smembers("nsfw_covers")  # type: ignore
+        nsfw = results["albums"]["items"][0]["id"] in bot.db_cache.nsfw_covers
 
         try:
             bot.cached_covers[query] = (cover, nsfw)
@@ -186,7 +187,7 @@ def resize_to_limit(data: BytesIO, limit: int) -> BytesIO:
                 for frame in ImageSequence.Iterator(im):
                     durations.append(frame.info["duration"])
                     new_frames.append(
-                        frame.resize([i // 2 for i in im.size], resample=Image.BICUBIC)
+                        frame.resize([i // 2 for i in im.size], resample=Image.BICUBIC)  # type: ignore
                     )
                 new_frames[0].save(
                     data,
@@ -297,3 +298,40 @@ async def run(cmd):
         logger.info(f"[stdout]\n{stdout.decode()}")
     if stderr:
         logger.error(f"[stderr]\n{stderr.decode()}")
+
+
+async def identify_mobile(self) -> None:
+    """Sends the IDENTIFY packet."""
+    payload = {
+        "op": self.IDENTIFY,
+        "d": {
+            "token": self.token,
+            "properties": {
+                "os": sys.platform,
+                "browser": "discord iOS",
+                "device": "discord.py",
+            },
+            "compress": True,
+            "large_threshold": 250,
+        },
+    }
+
+    if self.shard_id is not None and self.shard_count is not None:
+        payload["d"]["shard"] = [self.shard_id, self.shard_count]
+
+    state = self._connection
+    if state._activity is not None or state._status is not None:
+        payload["d"]["presence"] = {
+            "status": state._status,
+            "game": state._activity,
+            "since": 0,
+            "afk": False,
+        }
+
+    if state._intents is not None:
+        payload["d"]["intents"] = state._intents.value
+
+    await self.call_hooks(
+        "before_identify", self.shard_id, initial=self._initial_identify
+    )
+    await self.send_as_json(payload)

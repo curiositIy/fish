@@ -18,9 +18,7 @@ class Reactions(Cog):
         if message.guild is None:
             return
 
-        if str(message.guild.id) not in await self.bot.redis.smembers(
-            "auto_reactions_guilds"
-        ):
+        if message.channel.id not in self.bot.db_cache.auto_reaction_guilds:
             return
 
         if message.attachments:

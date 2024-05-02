@@ -108,10 +108,6 @@ class About(Cog):
             await bot.pool.execute("SELECT 1")
             psql_end = perf_counter()
 
-            redis_start = perf_counter()
-            await self.bot.redis.ping()
-            redis_end = perf_counter()
-
             mem = self.process.memory_full_info()
             memory_usage = mem.uss / 1024**2
             cpu_usage = self.process.cpu_percent() / psutil.cpu_count()
@@ -131,7 +127,6 @@ class About(Cog):
                cached messages : {len(bot.cached_messages):,}
              websocket latency : {round(bot.latency * 1000, 3)}ms
             postgresql latency : {round(psql_end - psql_start, 3)}ms
-                 redis latency : {round(redis_end - redis_start, 3)}ms
                 avatars logged : {len(avatars):,} - {avatars_today:,}
               usernames logged : {len(usernames):,} - {usernames_today:,}
                discrims logged : {len(discrims):,} - {discrims_today:,}

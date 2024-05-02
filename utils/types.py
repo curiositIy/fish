@@ -39,9 +39,6 @@ class Databases(TypedDict):
     psql: str
     psql_testing: str
 
-    redis: str
-    redis_testing: str
-
 
 class Ids(TypedDict):
     owner_id: int

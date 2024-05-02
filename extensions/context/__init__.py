@@ -121,7 +121,6 @@ class Context(commands.Context["Fishie"]):
         self.session = self.bot.session
         self._message_count: int = 0
         self.pool = self.bot.pool
-        self.redis = self.bot.redis
 
     async def prompt(
         self,

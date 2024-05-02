@@ -27,7 +27,7 @@ class Dropdown(discord.ui.ChannelSelect):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        channel: discord.TextChannel = self.values[0]
+        channel: discord.TextChannel = self.values[0]  # type: ignore
 
         if self.ctx.bot.settings is None:
             raise commands.BadArgument("Settings cog could not be found somehow.")
@@ -90,12 +90,12 @@ class Server(Cog):
         if len(prefix) > 10:
             raise commands.BadArgument("Prefixes can only be 10 characters long.")
 
-        if prefix in await bot.redis.smembers(f"prefixes:{ctx.guild.id}"):
+        if prefix in bot.db_cache.prefixes[ctx.guild.id]:
             raise commands.BadArgument("This prefix is already set.")
 
         sql = """INSERT INTO guild_prefixes (guild_id, prefix, author_id, time) VALUES ($1, $2, $3, $4)"""
         await bot.pool.execute(sql, ctx.guild.id, prefix, ctx.author.id, now)
-        await bot.redis.sadd(f"prefixes:{ctx.guild.id}", prefix)
+        bot.db_cache.add_prefix(ctx.guild.id, prefix)
         await ctx.send(f"Added prefix `{prefix}` to the server.")
 
     @prefix.command(name="remove", aliases=("delete", "r", "d", "del", "-"))
@@ -107,14 +107,14 @@ class Server(Cog):
         """Remove a prefix from the server"""
         bot = self.bot
 
-        if prefix not in await bot.redis.smembers(f"prefixes:{ctx.guild.id}"):
+        if prefix not in bot.db_cache.prefixes[ctx.guild.id]:
             raise commands.BadArgument(
                 "This prefix does not exist. Check your spelling and try again."
             )
 
         sql = """DELETE FROM guild_prefixes WHERE guild_id = $1 AND prefix = $2"""
         await bot.pool.execute(sql, ctx.guild.id, prefix)
-        await bot.redis.srem(f"prefixes:{ctx.guild.id}", prefix)
+        bot.db_cache.remove_prefix(ctx.guild.id, prefix)
         await ctx.send(f"Removed prefix `{prefix}` from the server.")
 
     async def add_adl_channel(self, channel: discord.TextChannel):
@@ -126,13 +126,13 @@ class Server(Cog):
         """
 
         await self.bot.pool.execute(sql, channel.guild.id, channel.id)
-        await self.bot.redis.sadd("auto_downloads", channel.id)
+        self.bot.db_cache.add_adl(channel.id)
 
     async def remove_adl_channel(self, channel: discord.TextChannel):
         sql = """UPDATE guild_settings SET auto_download = NULL WHERE guild_id = $1"""
 
         await self.bot.pool.execute(sql, channel.guild.id)
-        await self.bot.redis.srem("auto_downloads", str(channel.id))
+        self.bot.db_cache.remove_adl(channel.id)
 
     @commands.hybrid_group(
         name="auto-download",
@@ -177,7 +177,7 @@ class Server(Cog):
                 f"No auto-download channel found. You may set one with `{ctx.get_prefix}auto-download`"
             )
 
-        channel: discord.TextChannel = self.bot.get_channel(channel_id)
+        channel: discord.TextChannel = self.bot.get_channel(channel_id)  # type: ignore
 
         await self.remove_adl_channel(channel)
         await ctx.send(f"Removed auto-downloads from {channel.mention}")
@@ -207,9 +207,9 @@ class Server(Cog):
 
         await self.bot.pool.execute(sql, ctx.guild.id, value)
 
-        func = [self.bot.redis.srem, self.bot.redis.sadd]
+        func = [self.bot.db_cache.remove_poketwo, self.bot.db_cache.add_poketwo]
 
-        await func[value]("poketwo_guilds", ctx.guild.id)
+        func[value](ctx.guild.id)
 
         await ctx.send(
             f"{['Disabled', 'Enabled'][value]} Pokétwo auto-solving for this server."
@@ -238,9 +238,12 @@ class Server(Cog):
 
         await self.bot.pool.execute(sql, ctx.guild.id, value)
 
-        func = [self.bot.redis.srem, self.bot.redis.sadd]
+        func = [
+            self.bot.db_cache.remove_reaction_guilds,
+            self.bot.db_cache.add_reaction_guilds,
+        ]
 
-        await func[value]("auto_reactions_guilds", ctx.guild.id)
+        func[value](ctx.guild.id)
 
         await ctx.send(
             f"{['Disabled', 'Enabled'][value]} auto media reactions for this server."
