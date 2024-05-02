@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
 from .functions import to_thread
-from .regexes import SOUNDCLOUD_RE, TIKTOK_RE, TWITTER_RE, VIDEOS_RE
+from .regexes import SOUNDCLOUD_RE, TIKTOK_RE, TWITTER_RE, VIDEOS_RE, INSTAGRAM_RE
 
 if TYPE_CHECKING:
     from core import Fishie

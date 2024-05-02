@@ -293,7 +293,7 @@ class Fishie(commands.Bot):
             auto_reactions = row["auto_reactions"]
 
             if adl:
-                self.db_cache.add_adl(guild_id)
+                self.db_cache.add_adl(adl)
                 self.logger.info(
                     f'Added auto download channel "{adl}" to guild "{guild_id}"'
                 )
