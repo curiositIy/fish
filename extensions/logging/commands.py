@@ -128,11 +128,9 @@ class Commands(Cog):
     @avatars.command(name="server", aliases=("guild", "s"))
     @commands.guild_only()
     async def server_avatars(
-        self, ctx: Context, *, user: discord.User = commands.Author
+        self, ctx: GuildContext, *, user: discord.User = commands.Author
     ):
         """Shows a member's previous server avatars"""
-        if ctx.guild is None:
-            return  # wont happen
 
         await self.avatars_func(ctx, user, ctx.guild.id)
 
@@ -145,9 +143,25 @@ class Commands(Cog):
         self, ctx: Context, *, user: discord.User = commands.Author
     ):
         """Shows a user's previous avatars in a grid view"""
-        await ctx.send(
-            "Due to a recent discord update this command is broken, please use 'fish avatars' in the meantime"
+        if ctx.author.id != 766953372309127168:
+            return await ctx.send(
+                "Due to a recent discord update this command is broken, please use 'fish avatars' in the meantime"
+            )
+
+        results = await self.bot.pool.fetchrow(
+            "SELECT * FROM avatars WHERE user_id = $1", user.id
         )
+
+        if not results:
+            raise commands.BadArgument("Could not find any avatars for this user.")
+
+        archive: discord.TextChannel = self.bot.get_channel(
+            1237318125062586439
+        )  # type:ignore # wont be none
+
+        msg = await archive.send(results["avatar"])
+
+        await ctx.send(msg.content)
 
     @avatar_history.command(name="server", aliases=("guild", "s"))
     async def server_avatar_history(

@@ -21,7 +21,7 @@ def match_filter(info: Dict[Any, Any]):
 
 @to_thread
 def download(url: str, format: str = "mp4", bot: Optional[Fishie] = None):
-    name = secrets.token_urlsafe(8)
+    name = secrets.token_urlsafe(8).strip("-")
     video_match = VIDEOS_RE.search(url)
     audio = False
 
@@ -58,7 +58,7 @@ def download(url: str, format: str = "mp4", bot: Optional[Fishie] = None):
                 "when": "after_move",
             }
         ]
-    
+
     if INSTAGRAM_RE.search(video):
         options["cookies"] = r"instagram-cookies.txt"
 
