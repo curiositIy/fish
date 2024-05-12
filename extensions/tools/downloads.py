@@ -44,15 +44,6 @@ class Downloads(Cog):
             except commands.BadArgument:
                 pass
 
-            filename = await download(url, flags.format, bot=self.bot)
+            await download(ctx=ctx, url=url, format=flags.format, bot=self.bot)
 
-        file = discord.File(
-            rf"files/downloads/{filename}", f"{flags.title}.{flags.format}"
-        )
 
-        await ctx.send(file=file, ephemeral=True)
-
-        try:
-            await run(f"cd files/downloads && rm {filename}")
-        except:
-            pass

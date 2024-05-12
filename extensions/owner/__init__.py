@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Optional, Union
 
 import discord
@@ -8,6 +9,7 @@ from discord.ext import commands
 
 from core import Cog
 from utils import fish_owner, greenTick
+from io import BytesIO
 
 if TYPE_CHECKING:
     from core import Fishie
@@ -16,6 +18,10 @@ if TYPE_CHECKING:
 class Owner(Cog):
     emoji = fish_owner
     hidden: bool = True
+
+    def __init__(self, bot: Fishie):
+        super().__init__()
+        self.bot = bot
 
     @commands.command(name="reply")
     async def reply(
@@ -46,6 +52,28 @@ class Owner(Cog):
         await channel.send(text)
 
         await ctx.message.add_reaction(greenTick)
+
+    @commands.command(name="test")
+    async def test(
+        self,
+        ctx: commands.Context[Fishie]
+    ):
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "url": "https://www.tiktok.com/@pearl_raven/video/7353792319763549471"
+        }
+
+        s = await self.bot.session.post(headers=headers, url="https://co.wuk.sh/api/json", json=data)
+        data = await s.json()
+
+        async with self.bot.session.get(url=data["url"]) as body:
+            data = await body.read()
+            await ctx.send(file=discord.File(BytesIO(data),filename="temp.mp4"))
+
 
     async def cog_check(self, ctx: commands.Context[Fishie]) -> bool:
         if await ctx.bot.is_owner(ctx.author):

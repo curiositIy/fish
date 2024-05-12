@@ -57,18 +57,4 @@ class AutoDownload(Cog):
                 pass
 
         async with ctx.typing(ephemeral=True):
-            filename = await download(message.content, bot=self.bot)
-
-        try:
-            file = discord.File(rf"files/downloads/{filename}", f"{filename}")
-
-            await ctx.send(file=file, ephemeral=True)
-        except (FileNotFoundError, discord.HTTPException):
-            await ctx.send(
-                "No file found, maybe file too large or improper URL provided."
-            )
-
-        try:
-            await run(f"cd files/downloads && rm {filename}")
-        except:
-            pass
+            await download(ctx=ctx, url=message.content, bot=self.bot)
