@@ -166,6 +166,7 @@ CREATE TABLE IF NOT EXISTS guild_settings (
     auto_download BIGINT,
     poketwo BOOLEAN DEFAULT FALSE,
     auto_reactions BOOLEAN DEFAULT FALSE,
+    pinboard BIGINT,
     PRIMARY KEY (guild_id)
 );
 
@@ -206,4 +207,12 @@ CREATE TABLE IF NOT EXISTS user_rep_logs (
     author_id BIGINT,
     value BOOLEAN,
     comment TEXT
+);
+
+CREATE TABLE IF NOT EXISTS pinboard_pins (
+    message_id BIGINT,
+    author_id BIGINT,
+    target_id BIGINT,
+    guild_id BIGINT,
+    channel_id BIGINT
 );

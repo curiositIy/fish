@@ -45,5 +45,3 @@ class Downloads(Cog):
                 pass
 
             await download(ctx=ctx, url=url, format=flags.format, bot=self.bot)
-
-

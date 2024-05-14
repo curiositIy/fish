@@ -8,6 +8,7 @@ class db_cache:
     poketwo_guilds: List[int] = []
     auto_reaction_guilds: List[int] = []
     nsfw_covers: List[int] = []
+    pinboard: Dict[int, int] = {}
 
     def add_prefix(self, guild_id: int, prefix: str) -> List[str]:
         try:
@@ -27,6 +28,15 @@ class db_cache:
 
         return self.prefixes[guild_id]
 
+    def add_pinboard(self, guild_id: int, channel_id: int):
+        self.pinboard.update({guild_id: channel_id})
+
+    def remove_pinboard(self, guild_id: int, channel_id: int):
+        try:
+            del self.pinboard[guild_id]
+        except:
+            return self.pinboard[guild_id]
+
     def add_opt_out(self, object_id: int, value: str):
         try:
             self.opted_out[object_id].append(value)
@@ -45,12 +55,12 @@ class db_cache:
 
         return self.opted_out[object_id]
 
-    def add_adl(self, guild_id: int):
-        self.auto_downloads.append(guild_id)
+    def add_adl(self, channel_id: int):
+        self.auto_downloads.append(channel_id)
 
-    def remove_adl(self, guild_id: int):
+    def remove_adl(self, channel_id: int):
         try:
-            self.auto_downloads.remove(guild_id)
+            self.auto_downloads.remove(channel_id)
         except ValueError:
             pass
 

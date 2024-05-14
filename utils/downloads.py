@@ -16,34 +16,33 @@ if TYPE_CHECKING:
     from core import Fishie
     from core import Context
 
+
 def match_filter(info: Dict[Any, Any]):
     if info.get("live_status", None) == "is_live":
         raise VideoIsLive()
 
-async def download(ctx: Context, url: str, format: str = "mp4", bot: Optional[Fishie] = None):
+
+async def download(
+    ctx: Context, url: str, format: str = "mp4", bot: Optional[Fishie] = None
+):
     name = secrets.token_urlsafe(8).strip("-")
     if TIKTOK_RE.search(url) or INSTAGRAM_RE.search(url):
         if not bot:
             raise commands.BadArgument("Bot was not supplied, command cannot run.")
 
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "url": url,
-            "vQuality": "max",
-            "isAudioOnly": format == "mp3"
-        }
-        s = await bot.session.post(headers=headers, url="https://co.wuk.sh/api/json", json=data)
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        data = {"url": url, "vQuality": "max", "isAudioOnly": format == "mp3"}
+        s = await bot.session.post(
+            headers=headers, url="https://co.wuk.sh/api/json", json=data
+        )
         data = await s.json()
 
         async with bot.session.get(url=data["url"]) as body:
             data = await body.read()
-            file = discord.File(BytesIO(data),filename=f"{name}.{format}")
+            file = discord.File(BytesIO(data), filename=f"{name}.{format}")
     else:
         name = await yt_dlp_download(name=name, url=url, format=format, bot=bot)
-        file = discord.File(name, filename=name)
+        file = discord.File(f"files/downloads/{name}", filename=name)
 
     await ctx.send(file=file)
 
@@ -52,8 +51,11 @@ async def download(ctx: Context, url: str, format: str = "mp4", bot: Optional[Fi
     except:
         pass
 
+
 @to_thread
-def yt_dlp_download(name: str, url: str, format: str = "mp4", bot: Optional[Fishie] = None):
+def yt_dlp_download(
+    name: str, url: str, format: str = "mp4", bot: Optional[Fishie] = None
+):
     video_match = VIDEOS_RE.search(url)
     audio = False
 
@@ -68,7 +70,6 @@ def yt_dlp_download(name: str, url: str, format: str = "mp4", bot: Optional[Fish
         "max_filesize": 100_000_000,
         "match_filter": match_filter,
     }
-
 
     if SOUNDCLOUD_RE.search(video) or format == "mp3":
         format = "mp3"
@@ -87,7 +88,6 @@ def yt_dlp_download(name: str, url: str, format: str = "mp4", bot: Optional[Fish
                 "when": "after_move",
             }
         ]
-
 
     if audio:
         options.setdefault("postprocessors", []).append(

@@ -292,11 +292,18 @@ class Fishie(commands.Bot):
             adl = row["auto_download"]
             poketwo = row["poketwo"]
             auto_reactions = row["auto_reactions"]
+            pinboard = row["pinboard"]
 
             if adl:
                 self.db_cache.add_adl(adl)
                 self.logger.info(
                     f'Added auto download channel "{adl}" to guild "{guild_id}"'
+                )
+
+            if pinboard:
+                self.db_cache.add_pinboard(guild_id, pinboard)
+                self.logger.info(
+                    f'Added Pinboard channel "{pinboard}" to guild "{guild_id}"'
                 )
 
             if poketwo:

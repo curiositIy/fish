@@ -7,12 +7,13 @@ from utils import fish_discord
 from .emojis import Emojis
 from .info import Info
 from .raw import RawCommands
+from .pins import Pinboard
 
 if TYPE_CHECKING:
     from core import Fishie
 
 
-class Discord(Emojis, RawCommands, Info):
+class Discord(Emojis, RawCommands, Info, Pinboard):
     """Commands for discord itself"""
 
     emoji = fish_discord
