@@ -84,8 +84,15 @@ class HelpCommand(commands.HelpCommand):
         
         Or optionally you can use the select menu down below to browse through them all."""
 
+        field_3 = """
+        [Support Server](https://discord.com/invite/rM9u4MRFBE)
+        [Terms of Service](https://github.com/fishie-bot/fishie-bot/blob/main/Terms%20of%20Service.md)
+        [Privacy Policy](https://github.com/fishie-bot/fishie-bot/blob/main/Privacy%20Policy.md)
+        """
+
         embed.add_field(name="Command usage", value=dedent(field_1))
         embed.add_field(name="Getting started", value=dedent(field_2))
+        embed.add_field(name="Links", value=dedent(field_3), inline=False)
         await ctx.send(
             embed=embed,
             view=CogHelpView(self.context, [cog for cog, _ in mapping.items() if cog]),

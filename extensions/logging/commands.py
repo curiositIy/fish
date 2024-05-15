@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import datetime
-import random
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import asyncpg
@@ -19,6 +17,7 @@ from utils import (
     format_status,
     human_timedelta,
     to_image,
+    plural,
 )
 
 if TYPE_CHECKING:
@@ -369,3 +368,24 @@ class Commands(Cog):
         await ctx.send(
             f"{member} has been {format_status(member)} for {human_timedelta(results['created_at'], suffix=False)}."
         )
+
+    @commands.command(name="joins")
+    @commands.guild_only()
+    async def joins(self, ctx: GuildContext, member: discord.Member = commands.Author):
+        if "joins" in self.bot.db_cache.get_opted_out(member.id):
+            return await ctx.send(f"{member} has opted out of join logs.")
+
+        results: int = (
+            await ctx.pool.fetchval(
+                "SELECT COUNT(*) FROM member_join_logs WHERE member_id = $1 AND guild_id = $2",
+                member.id,
+                member.guild.id,
+            )
+            or 0
+        )
+
+        if results == 0 and self.bot.logging:
+            await self.bot.logging.add_join(member)
+            results = 1
+
+        await ctx.send(f"{member} has joined {ctx.guild} {plural(results):time}.")

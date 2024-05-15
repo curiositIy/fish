@@ -201,11 +201,11 @@ class Pinboard(Cog):
                 except:
                     pass
 
-    @commands.group(name="pinboard", aliases=("pb",))
-    @commands.is_owner()
+    @commands.hybrid_group(name="pinboard", aliases=("pb",), fallback="setup")
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def pinboard(self, ctx: GuildContext):
+        """Setup the Pinboard for your server."""
         item: int | None = (
             await ctx.pool.fetchval(
                 "SELECT pinboard FROM guild_settings WHERE guild_id = $1", ctx.guild.id
