@@ -21,7 +21,7 @@ from discord.ext.commands import Paginator as CommandPaginator
 
 from .emojis import fish_check, fish_gopage, fish_next, fish_previous, fish_trash
 from .functions import human_join
-from .vars import GoogleImageData
+from .vars import GoogleImageData, Review
 
 if TYPE_CHECKING:
     from extensions.context import Context
@@ -42,7 +42,7 @@ class Pager(discord.ui.View):
         *,
         ctx: Context,
         check_embeds: bool = True,
-        compact: bool = False,
+        compact: bool = False
     ):
         super().__init__()
         self.source: menus.PageSource = source
@@ -94,7 +94,7 @@ class Pager(discord.ui.View):
         page = await self.source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
         self._update_labels(0)
-        self.message = await self.ctx.send(**kwargs, view=self)
+        self.message = await self.ctx.send(**kwargs, view=self, ephemeral=e)
 
     async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
         value = await discord.utils.maybe_coroutine(self.source.format_page, self, page)
@@ -191,7 +191,7 @@ class FieldPageSource(menus.ListPageSource):
         self.footer = footer
         self.embed = discord.Embed(colour=0x2F3136)
 
-    async def format_page(self, menu, entries: Tuple[str, str]):
+    async def format_page(self, menu: Pager, entries: Tuple[str, str]):
         self.embed.clear_fields()
 
         for key, value in entries:
@@ -230,7 +230,7 @@ class UrbanPageSource(menus.ListPageSource):
             return ret[0:2000] + " [...]"
         return ret
 
-    async def format_page(self, menu, entries: Dict[Any, Any]):
+    async def format_page(self, menu: Pager, entries: Dict[Any, Any]):
         data = entries[0]
         embed = self.embed
         embed.clear_fields()
@@ -256,7 +256,9 @@ class AvatarsPageSource(menus.ListPageSource):
         super().__init__(entries, per_page=per_page)
         self.embed = discord.Embed(colour=0x2F3136)
 
-    async def format_page(self, menu, entries: Tuple[str, datetime.datetime, int]):
+    async def format_page(
+        self, menu: Pager, entries: Tuple[str, datetime.datetime, int]
+    ):
         maximum = self.get_max_pages()
 
         self.embed.set_footer(
@@ -273,7 +275,7 @@ class GoogleImagePageSource(menus.ListPageSource):
         super().__init__(entries, per_page=per_page)
         self.embed = discord.Embed(colour=0x2F3136)
 
-    async def format_page(self, menu, entry: GoogleImageData):
+    async def format_page(self, menu: Pager, entry: GoogleImageData):
         self.embed.clear_fields()
 
         self.embed.set_image(url=entry.image_url)
@@ -303,7 +305,7 @@ class FrontHelpPageSource(menus.ListPageSource):
         self.help_command = help_command
         self.embed = discord.Embed(colour=0x2F3136)
 
-    async def format_page(self, menu, entries: List[commands.Cog]):
+    async def format_page(self, menu: Pager, entries: List[commands.Cog]):
         self.embed.clear_fields()
 
         for cog in entries:
@@ -339,7 +341,7 @@ class ImagePageSource(menus.ListPageSource):
         super().__init__(entries, per_page=per_page)
         self.embed = discord.Embed(colour=0x2F3136)
 
-    async def format_page(self, menu, entries):
+    async def format_page(self, menu: Pager, entries):
         self.embed.clear_fields()
         self.embed.set_image(url=entries)
 
@@ -362,7 +364,7 @@ class TextPageSource(menus.ListPageSource):
 
         super().__init__(entries=pages.pages, per_page=1)
 
-    async def format_page(self, menu, content):
+    async def format_page(self, menu: Pager, content):
         maximum = self.get_max_pages()
         if maximum > 1:
             return f"{content}\nPage {menu.current_page + 1}/{maximum}"
@@ -395,3 +397,29 @@ class SimplePages(Pager):
     def __init__(self, entries, *, ctx: Context, per_page: int = 12):
         super().__init__(SimplePageSource(entries, per_page=per_page), ctx=ctx)
         self.embed = discord.Embed(colour=discord.Colour.blurple())
+
+
+class ReviewsPageSource(menus.ListPageSource):
+    """A page source that requires (Review) List items."""
+
+    def __init__(self, entries: List[Review], *, per_page=1):
+        super().__init__(entries, per_page=per_page)
+        self.embed = discord.Embed(colour=0x2F3136)
+
+    async def format_page(self, menu: Pager, entries: Review):
+        maximum = self.get_max_pages()
+        review = entries
+        author = review.sender
+
+        self.embed.set_footer(
+            text=f"Page {menu.current_page + 1}/{maximum} (ID: {review.id}) \nReviewed"
+        )
+        self.embed.description = review.comment
+        self.embed.timestamp = datetime.datetime.fromtimestamp(review.timestamp)
+        self.embed.set_author(
+            name=f"{author.username} ({author.user_id})",
+            icon_url=author.profilePhoto,
+            url=f"https://reviewdb.mantikafasi.dev/dashboard?query={review.target_id}",
+        )
+
+        return self.embed

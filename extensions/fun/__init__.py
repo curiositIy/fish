@@ -82,6 +82,25 @@ class Fun(About):
 
         await ctx.send(embed=embed, file=file, view=WTPView(ctx, data))
 
+    @commands.hybrid_command(
+        name="badapple",
+        aliases=(
+            "ba",
+            "bad apple",
+        ),
+    )
+    @commands.cooldown(1, 15, commands.BucketType.channel)
+    async def badapple(self, ctx: Context):
+        """Bad Apple!! feat.nomico"""
+
+        async with ctx.typing():
+            await ctx.send(
+                file=discord.File(
+                    "files/videos/bad apple.mp4",
+                    filename=f"fishie_loves_{ctx.author.name}.mp4",
+                )
+            )
+
 
 async def setup(bot: Fishie):
     await bot.add_cog(Fun(bot))

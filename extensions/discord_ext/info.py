@@ -28,6 +28,10 @@ from utils import (
     fish_go_back,
     human_join,
     reply,
+    Review,
+    ReviewsPageSource,
+    ReviewSender,
+    Pager,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +76,12 @@ class UserDropdown(discord.ui.Select):
                 description=f"View {user}'s avatar",
                 emoji=discord.PartialEmoji(name="\U0001f3a8"),
                 value="avatar",
+            ),
+            discord.SelectOption(
+                label="Reviews",
+                description=f"View {user}'s reviews",
+                emoji=discord.PartialEmoji(name="\U0001f4d4"),
+                value="reviews",
             ),
         ]
 
@@ -138,6 +148,13 @@ class UserDropdown(discord.ui.Select):
 
         self.avatar_cache = embed
         return embed
+
+    async def review_response(self, interaction: discord.Interaction) -> None:
+        cog = self.ctx.bot.discord
+        if cog:
+            await cog.review_func(self.ctx, self.user, hidden=True)
+        else:
+            await interaction.response.send_message(content="Could not find any reviews.", ephemeral=True)
 
     async def banner_response(self) -> discord.Embed:
         if self.banner_cache:
@@ -278,13 +295,17 @@ class UserDropdown(discord.ui.Select):
             "status": self.status_response,
         }
 
-        embed = await options[value]()
+        if value in options.keys():
+            embed = await options[value]()
 
-        if not interaction.message:
-            raise commands.BadArgument("Interaction message is gone somehow.")
+            if not interaction.message:
+                raise commands.BadArgument("Interaction message is gone somehow.")
 
-        await interaction.message.edit(embed=embed)
-        await interaction.response.defer()
+            await interaction.message.edit(embed=embed)
+            await interaction.response.defer()
+        else:
+            await interaction.response.defer()
+            await self.review_response(interaction)
 
 
 class UserView(AuthorView):
@@ -642,6 +663,31 @@ class Info(Cog):
 
         await ctx.send(embed=embed, view=UserView(ctx, user, embed, fuser))
 
+    async def review_func(self, ctx: Context, user: discord.User | discord.Member, hidden: bool = False):
+        url = f"https://manti.vendicated.dev/api/reviewdb/users/{user.id}/reviews"
+        async with ctx.session.get(url) as resp:
+            json = await resp.json()
+
+        data: List[Review] = [
+            Review(
+                id=r["id"],
+                sender=ReviewSender(
+                    user_id=r["sender"]["discordID"],
+                    profilePhoto=r["sender"]["profilePhoto"],
+                    username=r["sender"]["username"],
+                ),
+                comment=r["comment"],
+                timestamp=r["timestamp"],
+                target_id=user.id,
+            )
+            for r in json["reviews"][1:]
+        ]
+
+        source = ReviewsPageSource(entries=data)
+        source.embed.title = f"Review for {user.display_name} (via ReviewDB)"
+        pager = Pager(source, ctx=ctx)
+        await pager.start(ctx, e=hidden)
+
     @commands.command(name="userinfo", aliases=("ui", "user"))
     async def userinfo(
         self,
@@ -652,7 +698,8 @@ class Info(Cog):
         """
         Get information about a user
         """
-        await self.user_info(ctx, user)
+        async with ctx.typing():
+            await self.user_info(ctx, user)
 
     def channel_embed(self, channel: AllChannels) -> discord.Embed:
         embed = discord.Embed(
@@ -988,3 +1035,12 @@ class Info(Cog):
         self, ctx: Context, *, guild: discord.Guild = commands.CurrentGuild
     ):
         await self.server_splash(ctx, guild)
+
+    @commands.hybrid_command(name="reviews")
+    async def reviews(self, ctx: Context, user: discord.User = commands.Author, hidden: bool = False):
+        """Get reviews for a user.
+
+        These reviews are provided by ReviewDB ONLY. (for now)
+        """
+
+        await self.review_func(ctx, user, hidden)

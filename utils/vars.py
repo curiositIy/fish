@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 import discord
 
@@ -66,3 +67,19 @@ class SpotifySearchData:
     track: str
     album: str
     artist: str
+
+
+@dataclass()
+class ReviewSender:
+    user_id: int
+    profilePhoto: str
+    username: str
+
+
+@dataclass()
+class Review:
+    id: int
+    sender: ReviewSender
+    comment: str
+    timestamp: int
+    target_id: int
