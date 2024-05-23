@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     last_fm TEXT,
     steam TEXT,
     roblox TEXT,
+    genshin TEXT,
     PRIMARY KEY (user_id)
 );
 
@@ -215,4 +216,54 @@ CREATE TABLE IF NOT EXISTS pinboard_pins (
     target_id BIGINT,
     guild_id BIGINT,
     channel_id BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS user_fishing (
+    user_id BIGINT,
+    rod_level INT,
+    fish_caught BIGINT,
+    coins BIGINT,
+    PRIMARY KEY (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS caught_fish (
+    user_id BIGINT,
+    bass BIGINT,
+    commandtuna BIGINT,
+    salmon BIGINT,
+    caught_fish BIGINT,
+    carp BIGINT,
+    trout BIGINT,
+    sardine BIGINT,
+    blue_tang BIGINT,
+    pike BIGINT,
+    mackerel BIGINT,
+    red_snapper BIGINT,
+    shark BIGINT,
+    hammerhead_shark BIGINT,
+    great_white_shark BIGINT,
+    leviathan BIGINT,
+    kraken BIGINT,
+    PRIMARY KEY (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS sold_fish (
+    user_id BIGINT,
+    bass BIGINT,
+    commandtuna BIGINT,
+    salmon BIGINT,
+    caught_fish BIGINT,
+    carp BIGINT,
+    trout BIGINT,
+    sardine BIGINT,
+    blue_tang BIGINT,
+    pike BIGINT,
+    mackerel BIGINT,
+    red_snapper BIGINT,
+    shark BIGINT,
+    hammerhead_shark BIGINT,
+    great_white_shark BIGINT,
+    leviathan BIGINT,
+    kraken BIGINT,
+    PRIMARY KEY (user_id)
 );

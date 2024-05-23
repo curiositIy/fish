@@ -54,19 +54,21 @@ class Owner(Cog):
         await ctx.message.add_reaction(greenTick)
 
     @commands.command(name="test")
-    async def test(self, ctx: commands.Context[Fishie]):
+    async def test(self, ctx: commands.Context[Fishie], url: str):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-        data = {"url": "https://www.tiktok.com/@pearl_raven/video/7353792319763549471"}
+        data = {"url": url}
 
         s = await self.bot.session.post(
             headers=headers, url="https://co.wuk.sh/api/json", json=data
         )
         data = await s.json()
 
-        async with self.bot.session.get(url=data["url"]) as body:
-            data = await body.read()
-            await ctx.send(file=discord.File(BytesIO(data), filename="temp.mp4"))
+        await ctx.send(file=self.bot.too_big(json.dumps(data, indent=4)))
+
+        # async with self.bot.session.get(url=data["url"]) as body:
+        #    data = await body.read()
+        #    await ctx.send(file=discord.File(BytesIO(data), filename="temp.mp4"))
 
     async def cog_check(self, ctx: commands.Context[Fishie]) -> bool:
         if await ctx.bot.is_owner(ctx.author):

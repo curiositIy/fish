@@ -20,7 +20,7 @@ class VideoIsLive(DownloadError):
 class InvalidWebsite(DownloadError):
     def __init__(
         self,
-        message: str = "Unaccepted website. Only TikTok, Twitch, Instagram, YouTube, Reddit and Soundcloud are accepted right now.",
+        message: str = "Unaccepted website. Only Twitter, TikTok, Twitch, Instagram, YouTube, Reddit and Soundcloud are accepted right now. If you want to suggest another website join the support server and let us know.",
         *args: Any
     ) -> None:
         self.message: str = message

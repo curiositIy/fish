@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import secrets
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
@@ -88,6 +89,7 @@ def yt_dlp_download(
                 "when": "after_move",
             }
         ]
+        video = re.sub("x.com", "twitter.com", video, count=1)
 
     if audio:
         options.setdefault("postprocessors", []).append(

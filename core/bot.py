@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from extensions.logging import Logging
     from extensions.settings import Settings
     from extensions.tools import Tools
+    from extensions.fishing import Fishing
 
     from .cog import Cog
 
@@ -365,6 +366,10 @@ class Fishie(commands.Bot):
     @property
     def discord(self) -> Optional[DiscordCog]:
         return self.get_cog("Discord")  # type: ignore
+
+    @property
+    def fishing(self) -> Optional[Fishing]:
+        return self.get_cog("Fishing")  # type: ignore
 
     @property
     def embedcolor(self) -> int:
