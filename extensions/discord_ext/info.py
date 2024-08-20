@@ -154,7 +154,9 @@ class UserDropdown(discord.ui.Select):
         if cog:
             await cog.review_func(self.ctx, self.user, hidden=True)
         else:
-            await interaction.response.send_message(content="Could not find any reviews.", ephemeral=True)
+            await interaction.response.send_message(
+                content="Could not find any reviews.", ephemeral=True
+            )
 
     async def banner_response(self) -> discord.Embed:
         if self.banner_cache:
@@ -663,7 +665,9 @@ class Info(Cog):
 
         await ctx.send(embed=embed, view=UserView(ctx, user, embed, fuser))
 
-    async def review_func(self, ctx: Context, user: discord.User | discord.Member, hidden: bool = False):
+    async def review_func(
+        self, ctx: Context, user: discord.User | discord.Member, hidden: bool = False
+    ):
         url = f"https://manti.vendicated.dev/api/reviewdb/users/{user.id}/reviews"
         async with ctx.session.get(url) as resp:
             json = await resp.json()
@@ -1037,7 +1041,9 @@ class Info(Cog):
         await self.server_splash(ctx, guild)
 
     @commands.hybrid_command(name="reviews")
-    async def reviews(self, ctx: Context, user: discord.User = commands.Author, hidden: bool = False):
+    async def reviews(
+        self, ctx: Context, user: discord.User = commands.Author, hidden: bool = False
+    ):
         """Get reviews for a user.
 
         These reviews are provided by ReviewDB ONLY. (for now)

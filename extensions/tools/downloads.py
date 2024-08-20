@@ -25,6 +25,9 @@ class DownloadFlags(commands.FlagConverter, delimiter=" ", prefix="-"):
     ignore_checks: bool = commands.flag(
         description="you cant use this lol", default=False
     )
+    TwitterGif: bool = commands.flag(
+        description="Converts twitter GIFs into an actual .gif file.", default=True
+    )
 
 
 class Downloads(Cog):

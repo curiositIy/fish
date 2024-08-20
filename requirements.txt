@@ -1,6 +1,6 @@
 git+https://github.com/gorialis/jishaku
 git+https://github.com/Rapptz/discord-ext-menus
-discord
+discord.py
 isort
 black
 asyncpg

@@ -42,7 +42,7 @@ class Pager(discord.ui.View):
         *,
         ctx: Context,
         check_embeds: bool = True,
-        compact: bool = False
+        compact: bool = False,
     ):
         super().__init__()
         self.source: menus.PageSource = source

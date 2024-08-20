@@ -152,15 +152,14 @@ async def dagpi(bot: Fishie, message: discord.Message, url: str) -> Dict[str, st
 class WTPModal(discord.ui.Modal, title="Who's that Pokémon?"):
     view: WTPView
 
-    def __init__(self, ctx: Context, data: Dict[Any, Any]):
+    def __init__(self, ctx: Context, data: Dict[Any, Any], ez_mode=False):
         super().__init__()
         self.ctx = ctx
         self.data = data
+        self.ez_mode = ez_mode
 
     pokemon = discord.ui.TextInput(
-        label="Who's that Pokémon?",
-        style=discord.TextStyle.short,
-        required=True,
+        label="Who's that Pokémon?", style=discord.TextStyle.short, required=True
     )
 
     def _as(self, n: int) -> str:

@@ -36,6 +36,62 @@ class ScreenshotFlags(commands.FlagConverter, delimiter=" ", prefix="-"):
     full_page: bool = commands.flag(default=False, aliases=["fp"])
 
 
+# class AccountLinking(discord.ui.Modal, title='Account linking'):
+
+#     def __init__(self, ctx: Context, data: Dict[str, str]):
+#         super().__init__()
+#         self.ctx = ctx
+#         self.data = data
+
+#     lastfm = discord.ui.TextInput(
+#         label='Last.fm',
+#         default=data[""],
+#         placeholder='Enter your Last.fm account name here...',
+#     )
+
+#     steam = discord.ui.TextInput(
+#         label='Steam',
+#         placeholder='Enter your steam profile URL here...',
+#     )
+
+
+#     roblox = discord.ui.TextInput(
+#         label='Roblox',
+#         placeholder='Your Roblox account name OR ID here...',
+#     )
+
+#     osu = discord.ui.TextInput(
+#         label='OSU',
+#         placeholder='Your OSU account name OR ID here...',
+#     )
+
+#     genshin = discord.ui.TextInput(
+#         label='Genshin',
+#         placeholder='Your Genshin account ID here...',
+#     )
+
+#     osu = discord.ui.TextInput(
+#         label='OSU',
+#         placeholder='Your OSU account name here...',
+#     )
+
+#     osu = discord.ui.TextInput(
+#         label='OSU',
+#         placeholder='Your OSU account name here...',
+#     )
+
+#     async def on_error(self, interaction: discord.Interaction, error: Exception):
+#         self.ctx.bot.logger.info(
+#             f'View {self} errored by {self.ctx.author}. Full content: "{self.ctx.message.content}"'
+#         )
+#         await self.ctx.bot.log_error(error)
+
+#         try:
+#             await interaction.response.send_message(str(error), ephemeral=True)
+#         except discord.InteractionResponded:
+#             await interaction.followup.send(content=str(error), ephemeral=True)
+
+
 class Tools(Downloads, Reminder, Google, Spotify, PurgeCog):
     """Quality of life tools"""
 
@@ -131,6 +187,39 @@ class Tools(Downloads, Reminder, Google, Spotify, PurgeCog):
         pages = SimplePages(entries=data, per_page=10, ctx=ctx)
         pages.embed.title = f"Gloabl ranks"
         await pages.start(ctx)
+
+    # @commands.hybrid_group(name="accounts", fallback="list")
+    # async def accounts_group(self, ctx: Context):
+    #     sql = """SELECT * FROM accounts WHERE user_id = $1"""
+
+    #     results = await self.bot.pool.fetchrow(sql, ctx.author.id)
+
+    #     if not bool(results):
+    #         ...
+
+    #     results = dict(results) # type: ignore
+
+    #     embed = discord.Embed(color=self.bot.embedcolor)
+    #     embed.set_author(name=f"{ctx.author}'s linked accounts", icon_url=ctx.author.display_avatar.url)
+    #     for key, value in results.items():
+    #         if key == "user_id":
+    #             continue
+    #         embed.add_field(name=key.capitalize(), value=f"`{value}`", inline=False)
+
+    #     embed.set_footer(text="To add or remove accounts please run the command 'accounts link'")
+    #     await ctx.send(embed=embed)
+
+    # @accounts_group.command(name="link")
+    # async def accounts_link(self, ctx: Context):
+    #     """Opens up a menu to add or remove some accounts."""
+    #     sql = """SELECT * FROM accounts WHERE user_id = $1"""
+
+    #     results = await self.bot.pool.fetchrow(sql, ctx.author.id) # type: ignore
+
+    #     results: Dict[Any, Any] = dict(results) # type: ignore
+
+    #     if ctx.interaction:
+    #         await ctx.interaction.response.send_modal(AccountLinking(ctx, results))
 
 
 async def setup(bot: Fishie):

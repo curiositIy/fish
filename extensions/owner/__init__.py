@@ -23,10 +23,16 @@ class Owner(Cog):
         super().__init__()
         self.bot = bot
 
+    async def _add_reaction(self, ctx: Context, msg: discord.Message):
+        try:
+            await ctx.message.add_reaction(greenTick)
+        except:
+            pass
+
     @commands.command(name="reply")
     async def reply(
         self,
-        ctx: commands.Context[Fishie],
+        ctx: Context,
         message: Union[str, int],
         channel: Optional[Messageable] = None,
         *,
@@ -37,21 +43,21 @@ class Owner(Cog):
 
         await _message.reply(text)
 
-        await ctx.message.add_reaction(greenTick)
+        await self._add_reaction(ctx, ctx.message)
 
     @commands.command(name="message", aliases=("send", "msg", "dm"))
     async def message(
         self,
-        ctx: commands.Context[Fishie],
+        ctx: Context,
         channel: Optional[Union[Messageable, discord.User]] = commands.CurrentChannel,
         *,
         text: str,
     ):
         """Send a message"""
         channel = channel or ctx.channel
-        await channel.send(text)
+        await channel.send(text, allowed_mentions=discord.AllowedMentions.all())
 
-        await ctx.message.add_reaction(greenTick)
+        await self._add_reaction(ctx, ctx.message)
 
     @commands.command(name="test")
     async def test(self, ctx: Context, user: discord.User = commands.Author):

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import secrets
 from typing import TYPE_CHECKING, Any, Dict, Optional
@@ -10,7 +11,16 @@ from discord.ext import commands
 
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
 from .functions import to_thread, run
-from .regexes import SOUNDCLOUD_RE, TIKTOK_RE, TWITTER_RE, VIDEOS_RE, INSTAGRAM_RE
+from .regexes import (
+    SOUNDCLOUD_RE,
+    TIKTOK_RE,
+    TWITTER_RE,
+    VIDEOS_RE,
+    INSTAGRAM_RE,
+    YOUTUBE_RE,
+    YT_SHORT_RE,
+    YT_CLIP_RE,
+)
 from io import BytesIO
 
 if TYPE_CHECKING:
@@ -23,24 +33,64 @@ def match_filter(info: Dict[Any, Any]):
         raise VideoIsLive()
 
 
+def cobalt_checker(url: str) -> bool:
+    if (
+        TIKTOK_RE.search(url)
+        or INSTAGRAM_RE.search(url)
+        or YT_SHORT_RE.search(url)
+        or YT_CLIP_RE.search(url)
+        or YOUTUBE_RE.search(url)
+        or TWITTER_RE.search(url)
+    ):
+        return True
+    else:
+        return False
+
+
 async def download(
-    ctx: Context, url: str, format: str = "mp4", bot: Optional[Fishie] = None
+    ctx: Context,
+    url: str,
+    format: str = "mp4",
+    bot: Optional[Fishie] = None,
+    twitterGif: Optional[bool] = True,
 ):
     name = secrets.token_urlsafe(8).strip("-")
-    if TIKTOK_RE.search(url) or INSTAGRAM_RE.search(url):
+
+    if cobalt_checker(url):
         if not bot:
             raise commands.BadArgument("Bot was not supplied, command cannot run.")
 
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        data = {"url": url, "vQuality": "max", "isAudioOnly": format == "mp3"}
+        data = {
+            "url": url,
+            "vQuality": "max",
+            "isAudioOnly": format == "mp3",
+            "vCodec": "h264",
+            "twitterGif": twitterGif,
+        }
         s = await bot.session.post(
-            headers=headers, url="https://co.wuk.sh/api/json", json=data
+            headers=headers, url="https://api.cobalt.tools/api/json", json=data
         )
         data = await s.json()
+        try:
+            # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
+            async with bot.session.get(url=data["url"]) as body:
+                rData = await body.read()
 
-        async with bot.session.get(url=data["url"]) as body:
-            data = await body.read()
-            file = discord.File(BytesIO(data), filename=f"{name}.{format}")
+                if TWITTER_RE.search(url) and data["status"] == "stream":
+                    format = "gif"
+
+                file = discord.File(BytesIO(rData), filename=f"{name}.{format}")
+        except:
+            err_chan: discord.TextChannel = bot.get_channel(989112775487922237)  # type: ignore
+            await err_chan.send(
+                "<@766953372309127168>",
+                file=bot.too_big(json.dumps(data, indent=4)),
+                allowed_mentions=discord.AllowedMentions.all(),
+            )
+            return await ctx.send(
+                "Something went wrong, this was sent to the developers, sorry."
+            )
     else:
         name = await yt_dlp_download(name=name, url=url, format=format, bot=bot)
         file = discord.File(f"files/downloads/{name}", filename=name)
