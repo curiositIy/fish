@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from core import Cog
-from utils import VIDEOS_RE, download, run, TenorUrlConverter, to_image, TENOR_PAGE_RE
+from utils import VIDEOS_RE, Downloader, TenorUrlConverter, to_image, TENOR_PAGE_RE
 
 if TYPE_CHECKING:
     from extensions.context import Context
@@ -57,4 +57,6 @@ class AutoDownload(Cog):
                 pass
 
         async with ctx.typing(ephemeral=True):
-            await download(ctx=ctx, url=message.content, bot=self.bot)
+            dl = Downloader(ctx, message.content)
+
+            await dl.download()

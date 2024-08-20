@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 import re
 import secrets
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import discord
 import yt_dlp
-from discord.ext import commands
 
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
 from .functions import to_thread, run
@@ -24,7 +23,6 @@ from .regexes import (
 from io import BytesIO
 
 if TYPE_CHECKING:
-    from core import Fishie
     from core import Context
 
 
@@ -47,121 +45,174 @@ def cobalt_checker(url: str) -> bool:
         return False
 
 
-async def download(
-    ctx: Context,
-    url: str,
-    format: str = "mp4",
-    bot: Optional[Fishie] = None,
-    twitterGif: Optional[bool] = True,
-):
-    name = secrets.token_urlsafe(8).strip("-")
-
-    if cobalt_checker(url):
-        if not bot:
-            raise commands.BadArgument("Bot was not supplied, command cannot run.")
-
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        data = {
-            "url": url,
+class Downloader:
+    def __init__(
+        self,
+        ctx: Context,
+        url: str,
+        format: str = "mp4",
+        twitterGif: Optional[bool] = True,
+        picker: Optional[bool] = False,
+        filename: Optional[str] = secrets.token_urlsafe(8).strip("-"),
+    ) -> None:
+        self.ctx = ctx
+        self.url = url
+        self.format = format
+        self.twitterGif = twitterGif
+        self.picker = picker
+        self.filename = filename
+        self.headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        self.json_data = {
+            "url": self.url,
             "vQuality": "max",
             "isAudioOnly": format == "mp3",
             "vCodec": "h264",
-            "twitterGif": twitterGif,
+            "twitterGif": self.twitterGif,
         }
-        s = await bot.session.post(
-            headers=headers, url="https://api.cobalt.tools/api/json", json=data
-        )
-        data = await s.json()
-        try:
-            # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
-            async with bot.session.get(url=data["url"]) as body:
-                rData = await body.read()
 
-                if TWITTER_RE.search(url) and data["status"] == "stream":
-                    format = "gif"
+    async def _download(self) -> discord.File:
+        if cobalt_checker(self.url):
 
-                file = discord.File(BytesIO(rData), filename=f"{name}.{format}")
-        except:
-            err_chan: discord.TextChannel = bot.get_channel(989112775487922237)  # type: ignore
-            await err_chan.send(
-                "<@766953372309127168>",
-                file=bot.too_big(json.dumps(data, indent=4)),
-                allowed_mentions=discord.AllowedMentions.all(),
+            s = await self.ctx.session.post(
+                headers=self.headers,
+                url="https://api.cobalt.tools/api/json",
+                json=self.json_data,
             )
-            return await ctx.send(
-                "Something went wrong, this was sent to the developers, sorry."
+            data = await s.json()
+            if data["status"] == "picker":
+                raise DownloadError(
+                    "Twitter posts with multiple media are not downloadable right now, this should be fixed very soon. If you want updates, join the [discord](<https://discord.gg/rM9u4MRFBE>) server."
+                )
+            try:
+                # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
+                async with self.ctx.session.get(url=data["url"]) as body:
+                    bData = await body.read()
+
+                if TWITTER_RE.search(self.url) and data["status"] == "stream":
+                    self.format = "gif"
+
+                file = discord.File(
+                    BytesIO(bData), filename=f"{self.filename}.{self.format}"
+                )
+
+            except Exception as err:
+                err_chan: discord.TextChannel = self.ctx.bot.get_channel(989112775487922237)  # type: ignore
+                await err_chan.send(
+                    "<@766953372309127168>",
+                    file=self.ctx.too_big(json.dumps(data, indent=4)),
+                    allowed_mentions=discord.AllowedMentions.all(),
+                )
+                await self.ctx.bot.log_error(error=err)
+                raise DownloadError(
+                    "Something went wrong, this was sent to the developers, sorry."
+                )
+        else:
+            file = await self.yt_dlp_download()
+
+        return file
+
+    async def download(self):
+        files: List[discord.File] = []
+
+        if TWITTER_RE.search(self.url):
+            s = await self.ctx.session.post(
+                headers=self.headers,
+                url="https://api.cobalt.tools/api/json",
+                json=self.json_data,
             )
-    else:
-        name = await yt_dlp_download(name=name, url=url, format=format, bot=bot)
-        file = discord.File(f"files/downloads/{name}", filename=name)
+            data: Dict[Any, Any] = await s.json()
+            if data.get("status") == "picker":
+                for pd in data["picker"]:
+                    tempformat = "mp4"
 
-    await ctx.send(file=file)
+                    if pd["type"] == "photo":
+                        continue
 
-    try:
-        await run(f"cd files/downloads && rm {name}.{format}")
-    except:
-        pass
+                    if pd["type"] == "gif":
+                        tempformat = "gif"
 
+                    async with self.ctx.session.get(url=pd["url"]) as body:
+                        bData = await body.read()
 
-@to_thread
-def yt_dlp_download(
-    name: str, url: str, format: str = "mp4", bot: Optional[Fishie] = None
-):
-    video_match = VIDEOS_RE.search(url)
-    audio = False
+                    files.append(
+                        discord.File(
+                            BytesIO(bData), filename=f"{self.filename}.{tempformat}"
+                        )
+                    )
 
-    if video_match is None or video_match and video_match.group(0) == "":
-        raise InvalidWebsite()
+            else:
+                files.append(await self._download())
+        else:
+            files.append(await self._download())
 
-    video = video_match.group(0)
-
-    options: Dict[Any, Any] = {
-        "outtmpl": rf"files/downloads/{name}.%(ext)s",
-        "quiet": True,
-        "max_filesize": 100_000_000,
-        "match_filter": match_filter,
-    }
-
-    if SOUNDCLOUD_RE.search(video) or format == "mp3":
-        format = "mp3"
-        audio = True
-
-    if TWITTER_RE.search(video):
-        options["cookies"] = r"twitter-cookies.txt"
-        options["postprocessors"] = [
-            {
-                "key": "Exec",
-                "exec_cmd": [
-                    "mv %(filename)q %(filename)q.temp",
-                    "ffmpeg -y -i %(filename)q.temp -c copy -map 0 -brand mp42 %(filename)q",
-                    "rm %(filename)q.temp",
-                ],
-                "when": "after_move",
-            }
-        ]
-        video = re.sub("x.com", "twitter.com", video, count=1)
-
-    if audio:
-        options.setdefault("postprocessors", []).append(
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": format,
-                "preferredquality": "192",
-            }
+        await self.ctx.send(
+            files=files,
+            mention_author=True,
+            reference=self.ctx.message.to_reference(fail_if_not_exists=False),
         )
-        options["format"] = "bestaudio/best"
-    else:
-        options["format"] = f"bestvideo+bestaudio[ext={format}]/best"
 
-    with yt_dlp.YoutubeDL(options) as ydl:
-        try:
-            ydl.download(video)
-            if bot:
-                bot.current_downloads.append(f"{name}.{format}")
-        except ValueError as e:
-            raise DownloadError(str(e))
+        for file in files:
+            try:
+                await run(f"cd files/downloads && rm {file.filename}")
+            except:
+                pass
 
-    if bot:
-        bot.logger.info(f"Downloaded video: {name}.{format}")
+    @to_thread
+    def yt_dlp_download(self) -> discord.File:
+        video_match = VIDEOS_RE.search(self.url)
+        audio = False
 
-    return f"{name}.{format}"
+        if video_match is None or video_match and video_match.group(0) == "":
+            raise InvalidWebsite()
+
+        video = video_match.group(0)
+
+        options: Dict[Any, Any] = {
+            "outtmpl": rf"files/downloads/{self.filename}.%(ext)s",
+            "quiet": True,
+            "max_filesize": 100_000_000,
+            "match_filter": match_filter,
+        }
+
+        if SOUNDCLOUD_RE.search(video) or self.format == "mp3":
+            format = "mp3"
+            audio = True
+
+        if TWITTER_RE.search(video):
+            options["cookies"] = r"twitter-cookies.txt"
+            options["postprocessors"] = [
+                {
+                    "key": "Exec",
+                    "exec_cmd": [
+                        "mv %(filename)q %(filename)q.temp",
+                        "ffmpeg -y -i %(filename)q.temp -c copy -map 0 -brand mp42 %(filename)q",
+                        "rm %(filename)q.temp",
+                    ],
+                    "when": "after_move",
+                }
+            ]
+            video = re.sub("x.com", "twitter.com", video, count=1)
+
+        if audio:
+            options.setdefault("postprocessors", []).append(
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": format,
+                    "preferredquality": "192",
+                }
+            )
+            options["format"] = "bestaudio/best"
+        else:
+            options["format"] = f"bestvideo+bestaudio[ext={format}]/best"
+
+        with yt_dlp.YoutubeDL(options) as ydl:
+            try:
+                ydl.download(video)
+                self.ctx.bot.current_downloads.append(f"{self.filename}.{self.format}")
+            except ValueError as e:
+                raise DownloadError(str(e))
+
+        return discord.File(f"files/downloads/{self.filename}", filename=self.filename)

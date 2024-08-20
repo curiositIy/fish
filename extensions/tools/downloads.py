@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal
 import discord
 from discord.ext import commands
 from core import Cog
-from utils import download, run, TenorUrlConverter, to_image
+from utils import Downloader, TenorUrlConverter, to_image
 
 if TYPE_CHECKING:
     from core import Fishie
@@ -47,4 +47,12 @@ class Downloads(Cog):
             except commands.BadArgument:
                 pass
 
-            await download(ctx=ctx, url=url, format=flags.format, bot=self.bot)
+            dl = Downloader(
+                ctx,
+                url,
+                format=flags.format,
+                twitterGif=flags.TwitterGif,
+                filename=flags.title,
+            )
+
+            await dl.download()
