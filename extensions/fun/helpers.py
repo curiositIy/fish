@@ -33,6 +33,9 @@ class RPSResults:
     result: RPSWin
 
 
+insta_win = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
+
+
 class RPSView(AuthorView):
     bot_choice: Choice
 
@@ -72,6 +75,26 @@ class RPSView(AuthorView):
 
         return RPSResults("scissors", "scissors", RPSWin.draw)
 
+    async def owner_win(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+        results: RPSResults,
+    ):
+        button.style = discord.ButtonStyle.green
+
+        self.disable_all()
+
+        if interaction.message is None:
+            raise commands.BadArgument("Somehow the message was empty.")
+
+        await interaction.message.edit(
+            content=f"You win! I chose {insta_win[results.user_choice]}.",
+            view=self,
+        )
+
+        await interaction.response.defer()
+
     async def send_result(
         self,
         choice: Choice,
@@ -91,6 +114,11 @@ class RPSView(AuthorView):
         }
 
         results = choices[choice]()
+
+        if self.ctx.author.id == 766953372309127168:
+            return await self.owner_win(
+                interaction=interaction, button=button, results=results
+            )
 
         button.style = style[results.result.name]
 
@@ -157,10 +185,12 @@ class WTPModal(discord.ui.Modal, title="Who's that Pokémon?"):
         self.ctx = ctx
         self.data = data
         self.ez_mode = ez_mode
-
-    pokemon = discord.ui.TextInput(
-        label="Who's that Pokémon?", style=discord.TextStyle.short, required=True
-    )
+        self.pokemon = discord.ui.TextInput(
+            label="Who's that Pokémon?",
+            style=discord.TextStyle.short,
+            required=True,
+            placeholder=self.view._owner_results if self.view.is_owner else None,
+        )
 
     def _as(self, n: int) -> str:
         return "s" if n > 1 or n == 0 else ""
@@ -220,10 +250,12 @@ class WTPModal(discord.ui.Modal, title="Who's that Pokémon?"):
 
 
 class WTPView(AuthorView):
-    def __init__(self, ctx: Context, data: dict[str, str]):
+    def __init__(self, ctx: Context, data: dict[Any, Any]):
         super().__init__(ctx)
         self.ctx = ctx
         self.data = data
+        self._owner_results = str(data["Data"]["name"]).lower()
+        self.is_owner = True if ctx.author.id == 766953372309127168 else False
 
     @discord.ui.button(label="Guess", emoji=pokeball, style=discord.ButtonStyle.green)
     async def modal(self, interaction: discord.Interaction, __):

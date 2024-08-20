@@ -66,7 +66,7 @@ class Fun(About):
 
         await ctx.send(self.invite_url)
 
-    @commands.command(name="wtp", hidden=True)
+    @commands.command(name="wtp", hidden=True, enabled=False)
     async def wtp(self, ctx: Context):
         await ctx.typing()
 
