@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import json
-import re
+import os
 import secrets
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -10,7 +9,7 @@ import discord
 import yt_dlp
 
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
-from .functions import to_thread, run
+from .functions import to_thread, run, litterbox
 from .regexes import (
     SOUNDCLOUD_RE,
     TIKTOK_RE,
@@ -21,7 +20,7 @@ from .regexes import (
     YT_SHORT_RE,
     YT_CLIP_RE,
 )
-from io import BytesIO
+from io import BytesIO, BufferedReader
 
 if TYPE_CHECKING:
     from core import Context
@@ -82,10 +81,6 @@ class Downloader:
                 json=self.json_data,
             )
             data = await s.json()
-            if data["status"] == "picker":
-                raise DownloadError(
-                    "Twitter posts with multiple media are not downloadable right now, this should be fixed very soon. If you want updates, join the [discord](<https://discord.gg/rM9u4MRFBE>) server."
-                )
             try:
                 # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
                 async with self.ctx.session.get(url=data["url"]) as body:
@@ -113,57 +108,6 @@ class Downloader:
             file = await self.yt_dlp_download()
 
         return file
-
-    async def download(self):
-        files: List[discord.File] = []
-
-        if INSTAGRAM_RE.search(self.url):
-            files.append(
-                await self.manual_dl(cookies="files/cookies/instagram-cookies.txt")
-            )
-
-        elif TWITTER_RE.search(self.url):
-            s = await self.ctx.session.post(
-                headers=self.headers,
-                url="https://api.cobalt.tools/api/json",
-                json=self.json_data,
-            )
-            data: Dict[Any, Any] = await s.json()
-            if data.get("status") == "picker":
-                for pd in data["picker"]:
-                    tempformat = "mp4"
-
-                    if pd["type"] == "photo":
-                        continue
-
-                    if pd["type"] == "gif":
-                        tempformat = "gif"
-
-                    async with self.ctx.session.get(url=pd["url"]) as body:
-                        bData = await body.read()
-
-                    files.append(
-                        discord.File(
-                            BytesIO(bData), filename=f"{self.filename}.{tempformat}"
-                        )
-                    )
-
-            else:
-                files.append(await self._download())
-        else:
-            files.append(await self._download())
-
-        await self.ctx.send(
-            files=files,
-            mention_author=True,
-            reference=self.ctx.message.to_reference(fail_if_not_exists=False),
-        )
-
-        for file in files:
-            try:
-                await run(f"cd files/downloads && rm {file.filename}")
-            except:
-                pass
 
     @to_thread
     def yt_dlp_download(self) -> discord.File:
@@ -245,3 +189,74 @@ class Downloader:
             f"files/downloads/{self.filename}.{self.format}",
             filename=f"{self.filename}.{self.format}",
         )
+
+    async def download(self):
+        files: List[discord.File] = []
+
+        if INSTAGRAM_RE.search(self.url):
+            files.append(
+                await self.manual_dl(cookies="files/cookies/instagram-cookies.txt")
+            )
+
+        elif TWITTER_RE.search(self.url):
+            s = await self.ctx.session.post(
+                headers=self.headers,
+                url="https://api.cobalt.tools/api/json",
+                json=self.json_data,
+            )
+            data: Dict[Any, Any] = await s.json()
+            if data.get("status") == "picker":
+                for pd in data["picker"]:
+                    tempformat = "mp4"
+
+                    if pd["type"] == "photo":
+                        continue
+
+                    if pd["type"] == "gif":
+                        tempformat = "gif"
+
+                    async with self.ctx.session.get(url=pd["url"]) as body:
+                        bData = await body.read()
+
+                    files.append(
+                        discord.File(
+                            BytesIO(bData), filename=f"{self.filename}.{tempformat}"
+                        )
+                    )
+
+            else:
+                files.append(await self._download())
+        else:
+            files.append(await self._download())
+        try:
+
+            await self.ctx.send(
+                files=files,
+                mention_author=True,
+                reference=self.ctx.message.to_reference(fail_if_not_exists=False),
+            )
+        except discord.HTTPException:
+            text = "Files were too big, try a smaller video. **These will delete after 72 hours**\n\n"
+            for file in files:
+                bytes = await self.file_to_bytes(file)
+                url = await litterbox(self.ctx.session, bytes, file.filename)
+                text += f"{url}\n"
+
+            await self.ctx.send(text)
+
+        for file in files:
+
+            try:
+                await run(f"cd files/downloads && rm {file.filename}")
+            except:
+                pass
+
+    @to_thread
+    def file_to_bytes(self, file: discord.File) -> bytes:
+        fp: BufferedReader | BytesIO = file.fp  # type: ignore
+
+        if isinstance(fp, os.PathLike):
+            with open(fp.name, "rb") as f:
+                return f.read()
+        else:
+            return fp.read()

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from io import BytesIO
 import json
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
+import aiohttp
 import discord
 from discord.abc import Messageable
 from discord.ext import commands
@@ -60,31 +62,7 @@ class Owner(Cog):
         await self._add_reaction(ctx, ctx.message)
 
     @commands.command(name="test")
-    async def test(self, ctx: Context, user: discord.User = commands.Author):
-        async with ctx.session.get(
-            f"https://manti.vendicated.dev/api/reviewdb/users/{user.id}/reviews"
-        ) as resp:
-            json = await resp.json()
-
-        data: List[Review] = [
-            Review(
-                id=r["id"],
-                sender=ReviewSender(
-                    user_id=r["sender"]["discordID"],
-                    profilePhoto=r["sender"]["profilePhoto"],
-                    username=r["sender"]["username"],
-                ),
-                comment=r["comment"],
-                timestamp=r["timestamp"],
-                target_id=user.id,
-            )
-            for r in json["reviews"][1:]
-        ]
-
-        source = ReviewsPageSource(entries=data)
-        source.embed.title = f"Review for {user.display_name} (via ReviewDB)"
-        pager = Pager(source, ctx=ctx)
-        await pager.start(ctx)
+    async def test(self, ctx: Context, user: discord.User = commands.Author): ...
 
     async def cog_check(self, ctx: commands.Context[Fishie]) -> bool:
         if await ctx.bot.is_owner(ctx.author):

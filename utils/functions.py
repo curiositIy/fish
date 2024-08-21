@@ -13,6 +13,7 @@ from typing import (
     Awaitable,
     Callable,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -335,3 +336,27 @@ async def identify_mobile(self) -> None:
         "before_identify", self.shard_id, initial=self._initial_identify
     )
     await self.send_as_json(payload)
+
+
+async def litterbox(
+    session: aiohttp.ClientSession,
+    file: bytes,
+    filename: str,
+    time: Union[
+        Literal["1h"], Literal["12h"], Literal["12h"], Literal["24h"], Literal["72h"]
+    ] = "72h",
+) -> str:
+    data = aiohttp.FormData()
+    data.add_field(
+        "fileToUpload", file, filename=filename, content_type="application/octet-stream"
+    )
+    data.add_field("reqtype", "fileupload")
+    data.add_field("time", time)
+
+    async with session.post(
+        "https://litterbox.catbox.moe/resources/internals/api.php", data=data
+    ) as resp:
+        if resp.status != 200:
+            raise commands.CommandError("File too large.")
+
+        return await resp.text()
