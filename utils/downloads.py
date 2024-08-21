@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import secrets
@@ -34,7 +35,6 @@ def match_filter(info: Dict[Any, Any]):
 def cobalt_checker(url: str) -> bool:
     if (
         TIKTOK_RE.search(url)
-        or INSTAGRAM_RE.search(url)
         or YT_SHORT_RE.search(url)
         or YT_CLIP_RE.search(url)
         or YOUTUBE_RE.search(url)
@@ -117,7 +117,12 @@ class Downloader:
     async def download(self):
         files: List[discord.File] = []
 
-        if TWITTER_RE.search(self.url):
+        if INSTAGRAM_RE.search(self.url):
+            files.append(
+                await self.manual_dl(cookies="files/cookies/instagram-cookies.txt")
+            )
+
+        elif TWITTER_RE.search(self.url):
             s = await self.ctx.session.post(
                 headers=self.headers,
                 url="https://api.cobalt.tools/api/json",
@@ -178,23 +183,23 @@ class Downloader:
         }
 
         if SOUNDCLOUD_RE.search(video) or self.format == "mp3":
-            format = "mp3"
+            self.format = "mp3"
             audio = True
 
-        if TWITTER_RE.search(video):
-            options["cookies"] = r"twitter-cookies.txt"
-            options["postprocessors"] = [
-                {
-                    "key": "Exec",
-                    "exec_cmd": [
-                        "mv %(filename)q %(filename)q.temp",
-                        "ffmpeg -y -i %(filename)q.temp -c copy -map 0 -brand mp42 %(filename)q",
-                        "rm %(filename)q.temp",
-                    ],
-                    "when": "after_move",
-                }
-            ]
-            video = re.sub("x.com", "twitter.com", video, count=1)
+        # if TWITTER_RE.search(video):
+        #     options["cookies"] = r"files/cookies/twitter-cookies.txt"
+        #     options["postprocessors"] = [
+        #         {
+        #             "key": "Exec",
+        #             "exec_cmd": [
+        #                 "mv %(filename)q %(filename)q.temp",
+        #                 "ffmpeg -y -i %(filename)q.temp -c copy -map 0 -brand mp42 %(filename)q",
+        #                 "rm %(filename)q.temp",
+        #             ],
+        #             "when": "after_move",
+        #         }
+        #     ]
+        #     video = re.sub("x.com", "twitter.com", video, count=1)
 
         if audio:
             options.setdefault("postprocessors", []).append(
@@ -206,7 +211,7 @@ class Downloader:
             )
             options["format"] = "bestaudio/best"
         else:
-            options["format"] = f"bestvideo+bestaudio[ext={format}]/best"
+            options["format"] = f"bestvideo+bestaudio[ext={self.format}]/best"
 
         with yt_dlp.YoutubeDL(options) as ydl:
             try:
@@ -215,4 +220,28 @@ class Downloader:
             except ValueError as e:
                 raise DownloadError(str(e))
 
-        return discord.File(f"files/downloads/{self.filename}", filename=self.filename)
+        return discord.File(
+            f"files/downloads/{self.filename}.{self.format}",
+            filename=f"{self.filename}.{self.format}",
+        )
+
+    async def manual_dl(self, cookies: Optional[str]) -> discord.File:
+        """Manually runs the yt-dlp command line download.
+
+        Cookies should be a path to the cookies"""
+        cmd = f"venv/bin/yt-dlp {self.url} "
+        if cookies:
+            cmd += f"--cookies {cookies} "
+        cmd += f"--format bestvideo+bestaudio[ext={self.format}]/best "
+        cmd += f'-o "{self.filename}.%(ext)s" '
+        cmd += '-P "files/downloads"'
+
+        self.ctx.bot.logger.warn(cmd)
+
+        await run(cmd)
+        self.ctx.bot.current_downloads.append(f"{self.filename}.{self.format}")
+
+        return discord.File(
+            f"files/downloads/{self.filename}.{self.format}",
+            filename=f"{self.filename}.{self.format}",
+        )

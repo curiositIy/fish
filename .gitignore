@@ -4,9 +4,8 @@ __pycache__/
 .env
 *.log
 /.vscode
-/twitter-cookies.txt
-/instagram-cookies.txt
-/tiktok-cookies.txt
+/files/cookies/twitter-cookies.txt
+/files/cookies/instagram-cookies.txt
 /extensions/private
 testing.py
 /files/downloads/
