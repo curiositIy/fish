@@ -55,6 +55,8 @@ class Spotify(Cog):
         invoke_without_command=True,
         fallback="track",
     )
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(query="The name of the track")
     async def spotify(self, ctx: Context, *, query: str):
         """Search for a track on spotify"""
@@ -64,6 +66,8 @@ class Spotify(Cog):
         await ctx.send(await self.search(ctx=ctx, mode="track", query=query))
 
     @spotify.command(name="album", aliases=("ab",))
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(query="The name of the album")
     async def album_hybrid(self, ctx: Context, *, query: str):
         """Search for an album on spotify"""
@@ -71,6 +75,8 @@ class Spotify(Cog):
         await ctx.send(await self.search(ctx=ctx, mode="artist", query=query))
 
     @spotify.command(name="artist", aliases=("art",))
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(query="The name of the artist")
     async def artist_hybrid(self, ctx: Context, *, query: str):
         """Search for an artist on spotify"""
@@ -78,6 +84,8 @@ class Spotify(Cog):
         await ctx.send(await self.search(ctx=ctx, mode="artist", query=query))
 
     @commands.hybrid_command(name="cover", aliases=("co",))
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(query="The name of the album")
     async def cover_hybrid(self, ctx: Context, *, query: str):
         """Get the cover for an album on spotify"""

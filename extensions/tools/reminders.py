@@ -66,7 +66,7 @@ class TimeZone(NamedTuple):
         timezones = ctx.cog.find_timezones(argument)
 
         try:
-            return await ctx.disambiguate(timezones, lambda t: t[0], ephemeral=True)
+            return await ctx.disambiguate(timezones, lambda t: t[0], ephemeral=True)  # type: ignore
         except ValueError:
             raise commands.BadArgument(f"Could not find timezone for {argument!r}")
 
@@ -492,6 +492,8 @@ class Reminder(Cog):
     @commands.hybrid_group(
         name="remind", aliases=["timer", "reminder", "remindme"], usage="<when>"
     )
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminder(
         self,
         ctx: Context,
@@ -538,6 +540,8 @@ class Reminder(Cog):
     @app_commands.describe(
         when="When to be reminded of something.", text="What to be reminded of"
     )
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminder_set(
         self,
         interaction: discord.Interaction,
@@ -570,6 +574,8 @@ class Reminder(Cog):
             await interaction.response.send_message(str(error), ephemeral=True)
 
     @reminder.command(name="delete", aliases=["remove", "cancel"], ignore_extra=False)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminder_delete(self, ctx: Context, *, id: int):
         """Deletes a reminder by its ID.
 
@@ -597,6 +603,8 @@ class Reminder(Cog):
         await ctx.send("Successfully deleted reminder.", ephemeral=True)
 
     @reminder.command(name="clear", ignore_extra=False)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminder_clear(self, ctx: Context):
         """Clears all reminders you have set."""
 
@@ -661,21 +669,29 @@ class Reminder(Cog):
         await menu.start(ctx)
 
     @reminder.command(name="list", ignore_extra=False)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminder_list(self, ctx: Context):
         """Shows the 10 latest currently running reminders."""
         await self.reminders_command(ctx)
 
-    @commands.command(name="reminders")
+    @commands.hybrid_command(name="reminders")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def reminders(self, ctx: Context):
         """Shows the 10 latest currently running reminders."""
         await self.reminders_command(ctx)
 
     @commands.hybrid_group()
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def timezone(self, ctx: Context):
         """Commands related to managing or retrieving timezone info"""
         await ctx.send_help(ctx.command)
 
     @timezone.command(name="set")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(tz="The timezone to change to.")
     async def timezone_set(self, ctx: Context, *, tz: TimeZone):
         """Sets your timezone.
@@ -702,6 +718,8 @@ class Reminder(Cog):
         )
 
     @timezone.command(name="info")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(tz="The timezone to get info about.")
     async def timezone_info(self, ctx: Context, *, tz: TimeZone):
         """Retrieves info about a timezone."""
@@ -730,6 +748,8 @@ class Reminder(Cog):
         return [tz.to_choice() for tz in matches[:25]]
 
     @timezone.command(name="get")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(
         user="The member to get the timezone of. Defaults to yourself."
     )
@@ -755,6 +775,8 @@ class Reminder(Cog):
             await ctx.send(f"The current time for {user} is {time}.")
 
     @timezone.command(name="clear")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def timezone_clear(self, ctx: Context):
         """Clears your timezone."""
         await ctx.bot.pool.execute(

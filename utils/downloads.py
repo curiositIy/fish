@@ -9,7 +9,7 @@ import discord
 import yt_dlp
 
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
-from .functions import to_thread, run, litterbox
+from .functions import to_thread, run, litterbox, capitalize_text
 from .regexes import (
     SOUNDCLOUD_RE,
     TIKTOK_RE,
@@ -19,6 +19,7 @@ from .regexes import (
     YOUTUBE_RE,
     YT_SHORT_RE,
     YT_CLIP_RE,
+    REDDIT_RE,
 )
 from io import BytesIO, BufferedReader
 
@@ -35,9 +36,9 @@ def cobalt_checker(url: str) -> bool:
     if (
         TIKTOK_RE.search(url)
         or YT_SHORT_RE.search(url)
-        or YT_CLIP_RE.search(url)
         or YOUTUBE_RE.search(url)
         or TWITTER_RE.search(url)
+        or REDDIT_RE.search(url)
     ):
         return True
     else:
@@ -53,6 +54,7 @@ class Downloader:
         twitterGif: Optional[bool] = True,
         picker: Optional[bool] = False,
         filename: Optional[str] = secrets.token_urlsafe(8).strip("-"),
+        hidden: Optional[bool] = False,
     ) -> None:
         self.ctx = ctx
         self.url = url
@@ -60,6 +62,7 @@ class Downloader:
         self.twitterGif = twitterGif
         self.picker = picker
         self.filename = filename
+        self.hidden = hidden
         self.headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -73,14 +76,17 @@ class Downloader:
         }
 
     async def _download(self) -> discord.File:
-        if cobalt_checker(self.url):
+        if YT_CLIP_RE.search(self.url):
+            raise DownloadError("Youtube clips are not supported at the moment, sorry.")
 
+        if cobalt_checker(self.url):
             s = await self.ctx.session.post(
                 headers=self.headers,
                 url="https://api.cobalt.tools/api/json",
                 json=self.json_data,
             )
-            data = await s.json()
+            data: Dict[Any, Any] = await s.json()
+
             try:
                 # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
                 async with self.ctx.session.get(url=data["url"]) as body:
@@ -95,15 +101,19 @@ class Downloader:
 
             except Exception as err:
                 err_chan: discord.TextChannel = self.ctx.bot.get_channel(989112775487922237)  # type: ignore
+                _id = secrets.token_urlsafe(5)
+
                 await err_chan.send(
-                    "<@766953372309127168>",
+                    f"<@766953372309127168> | <{self.url}> | {_id}",
                     file=self.ctx.too_big(json.dumps(data, indent=4)),
                     allowed_mentions=discord.AllowedMentions.all(),
                 )
                 await self.ctx.bot.log_error(error=err)
-                raise DownloadError(
-                    "Something went wrong, this was sent to the developers, sorry."
+                _err = data.get(
+                    "error",
+                    "Something went wrong, this was sent to the developers, sorry.",
                 )
+                raise DownloadError(f"{capitalize_text(_err)} Error ID: `{_id}`")
         else:
             file = await self.yt_dlp_download()
 
@@ -206,6 +216,7 @@ class Downloader:
             )
             data: Dict[Any, Any] = await s.json()
             if data.get("status") == "picker":
+                MVD = await self.ctx.send("Multiple videos detected, downloading.")
                 for pd in data["picker"]:
                     tempformat = "mp4"
 
@@ -223,6 +234,7 @@ class Downloader:
                             BytesIO(bData), filename=f"{self.filename}.{tempformat}"
                         )
                     )
+                    await MVD.delete()
 
             else:
                 files.append(await self._download())
@@ -234,6 +246,7 @@ class Downloader:
                 files=files,
                 mention_author=True,
                 reference=self.ctx.message.to_reference(fail_if_not_exists=False),
+                ephemeral=self.hidden,
             )
         except discord.HTTPException:
             text = "Files were too big, try a smaller video. **These will delete after 72 hours**\n\n"
@@ -242,7 +255,7 @@ class Downloader:
                 url = await litterbox(self.ctx.session, bytes, file.filename)
                 text += f"{url}\n"
 
-            await self.ctx.send(text)
+            await self.ctx.send(text, ephemeral=self.hidden)
 
         for file in files:
 

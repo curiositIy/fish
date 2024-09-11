@@ -8,6 +8,7 @@ import discord
 from discord.ext import commands
 from core import Cog
 from utils import Downloader, TenorUrlConverter, to_image
+from discord import app_commands
 
 if TYPE_CHECKING:
     from core import Fishie
@@ -26,15 +27,22 @@ class DownloadFlags(commands.FlagConverter, delimiter=" ", prefix="-"):
         description="you cant use this lol", default=False
     )
     TwitterGif: bool = commands.flag(
-        description="Converts twitter GIFs into an actual .gif file.", default=True
+        name="twitter_gif",
+        description="Converts twitter GIFs into an actual .gif file.",
+        default=True,
+    )
+    hidden: bool = commands.flag(
+        description="Hides the download (only for app commands)", default=True
     )
 
 
 class Downloads(Cog):
     @commands.hybrid_command(name="download", aliases=("dl",))
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def download(self, ctx: Context, url: str, *, flags: DownloadFlags):
         """Download a video off the internet"""
-        async with ctx.typing(ephemeral=True):
+        async with ctx.typing(ephemeral=flags.hidden):
             try:
                 url = await TenorUrlConverter().convert(ctx, url)
                 img = await to_image(ctx.session, url)

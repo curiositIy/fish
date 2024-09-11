@@ -8,7 +8,8 @@ import discord
 from discord.ext import commands
 from discord.utils import escape_markdown
 from playwright.async_api import async_playwright
-
+from discord import app_commands
+from extensions.context import Context
 from utils import (
     Pager,
     SimplePages,
@@ -16,7 +17,9 @@ from utils import (
     UrbanPageSource,
     URLConverter,
     get_or_fetch_user,
+    AuthorView,
 )
+from utils.emojis import user, fish_trash, fish_check
 
 from .downloads import Downloads
 from .google import Google
@@ -36,60 +39,70 @@ class ScreenshotFlags(commands.FlagConverter, delimiter=" ", prefix="-"):
     full_page: bool = commands.flag(default=False, aliases=["fp"])
 
 
-# class AccountLinking(discord.ui.Modal, title='Account linking'):
-
-#     def __init__(self, ctx: Context, data: Dict[str, str]):
-#         super().__init__()
-#         self.ctx = ctx
-#         self.data = data
-
-#     lastfm = discord.ui.TextInput(
-#         label='Last.fm',
-#         default=data[""],
-#         placeholder='Enter your Last.fm account name here...',
-#     )
-
-#     steam = discord.ui.TextInput(
-#         label='Steam',
-#         placeholder='Enter your steam profile URL here...',
-#     )
+value_formatter = {
+    "osu": "OSU",
+    "lastfm": "Last.fm",
+    "steam": "Steam",
+    "roblox": "Roblox",
+    "genshin": "Genshin",
+}
 
 
-#     roblox = discord.ui.TextInput(
-#         label='Roblox',
-#         placeholder='Your Roblox account name OR ID here...',
-#     )
+class AccountLinking(discord.ui.Modal, title="Account linking"):
 
-#     osu = discord.ui.TextInput(
-#         label='OSU',
-#         placeholder='Your OSU account name OR ID here...',
-#     )
+    def __init__(self, ctx: Context, data: Dict[str, str], embed: discord.Embed):
+        super().__init__()
+        self.ctx = ctx
+        self.data = data
+        self.embed = embed
 
-#     genshin = discord.ui.TextInput(
-#         label='Genshin',
-#         placeholder='Your Genshin account ID here...',
-#     )
+        for name, value in self.data.items():
+            if name == "user_id":
+                continue
 
-#     osu = discord.ui.TextInput(
-#         label='OSU',
-#         placeholder='Your OSU account name here...',
-#     )
+            self.add_item(
+                item=discord.ui.TextInput(
+                    label=value_formatter[name],
+                    default=value,
+                    placeholder=f"Enter your {value_formatter[name]} Username/ID here.",
+                    required=False,
+                )
+            )
 
-#     osu = discord.ui.TextInput(
-#         label='OSU',
-#         placeholder='Your OSU account name here...',
-#     )
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        self.ctx.bot.logger.info(
+            f'View {self} errored by {self.ctx.author}. Full content: "{self.ctx.message.content}"'
+        )
+        await self.ctx.bot.log_error(error)
 
-#     async def on_error(self, interaction: discord.Interaction, error: Exception):
-#         self.ctx.bot.logger.info(
-#             f'View {self} errored by {self.ctx.author}. Full content: "{self.ctx.message.content}"'
-#         )
-#         await self.ctx.bot.log_error(error)
+        try:
+            await interaction.response.send_message(str(error), ephemeral=True)
+        except discord.InteractionResponded:
+            await interaction.followup.send(content=str(error), ephemeral=True)
 
-#         try:
-#             await interaction.response.send_message(str(error), ephemeral=True)
-#         except discord.InteractionResponded:
-#             await interaction.followup.send(content=str(error), ephemeral=True)
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message(str(self.children))
+
+
+class AccountsView(AuthorView):
+    def __init__(self, ctx: Context, data: Dict[Any, Any], embed: discord.Embed):
+        super().__init__(ctx)
+        self.ctx = ctx
+        self.data = data
+        self.embed = embed
+
+    @discord.ui.button(emoji=user, style=discord.ButtonStyle.green)
+    async def open(self, interaction: discord.Interaction, __):
+        await interaction.response.send_modal(
+            AccountLinking(self.ctx, self.data, self.embed)
+        )
+
+    @discord.ui.button(emoji=fish_trash, style=discord.ButtonStyle.red)
+    async def delete(self, interaction: discord.Interaction, __):
+        await interaction.response.defer()
+        await interaction.delete_original_response()
+        await self.ctx.message.add_reaction(fish_check)
+        self.stop()
 
 
 class Tools(Downloads, Reminder, Google, Spotify, PurgeCog):
@@ -168,9 +181,9 @@ class Tools(Downloads, Reminder, Google, Spotify, PurgeCog):
         except:
             return user_id
 
-    @commands.hybrid_command(name="rank", aliases=("leaderboard", "lb"))
-    async def rank(self, ctx: Context):
-        """Check your global rank"""
+    @commands.hybrid_command(name="leaderboard", aliases=("lb",))
+    async def leaderboard(self, ctx: Context):
+        """Check the global XP leaderboard"""
         xp = await self.bot.pool.fetch(
             "SELECT user_id, xp FROM message_xp ORDER BY xp DESC LIMIT 100",
         )
@@ -188,38 +201,39 @@ class Tools(Downloads, Reminder, Google, Spotify, PurgeCog):
         pages.embed.title = f"Gloabl ranks"
         await pages.start(ctx)
 
-    # @commands.hybrid_group(name="accounts", fallback="list")
-    # async def accounts_group(self, ctx: Context):
-    #     sql = """SELECT * FROM accounts WHERE user_id = $1"""
+    @commands.hybrid_command(name="accounts")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def accounts_group(self, ctx: Context):
+        """Shows your accounts connected to the bot, also connect some if you want."""
+        sql = """SELECT * FROM accounts WHERE user_id = $1"""
 
-    #     results = await self.bot.pool.fetchrow(sql, ctx.author.id)
+        results = await self.bot.pool.fetchrow(sql, ctx.author.id)  # type: ignore
 
-    #     if not bool(results):
-    #         ...
+        if not bool(results):
+            sql = await self.bot.pool.fetchrow(
+                "INSERT INTO accounts (user_id) VALUES ($1)"
+            )
+            results = await self.bot.pool.fetchrow(sql, ctx.author.id)  # type: ignore
 
-    #     results = dict(results) # type: ignore
+        results: Dict[Any, Any] = dict(results)  # type: ignore
 
-    #     embed = discord.Embed(color=self.bot.embedcolor)
-    #     embed.set_author(name=f"{ctx.author}'s linked accounts", icon_url=ctx.author.display_avatar.url)
-    #     for key, value in results.items():
-    #         if key == "user_id":
-    #             continue
-    #         embed.add_field(name=key.capitalize(), value=f"`{value}`", inline=False)
+        embed = discord.Embed(color=self.bot.embedcolor)
+        embed.set_author(
+            name=f"{ctx.author}'s linked accounts",
+            icon_url=ctx.author.display_avatar.url,
+        )
+        for key, value in results.items():
+            if key == "user_id":
+                continue
+            embed.add_field(
+                name=value_formatter[key],
+                value=f"`{value or 'Set with button below.'}`",
+                inline=False,
+            )
 
-    #     embed.set_footer(text="To add or remove accounts please run the command 'accounts link'")
-    #     await ctx.send(embed=embed)
-
-    # @accounts_group.command(name="link")
-    # async def accounts_link(self, ctx: Context):
-    #     """Opens up a menu to add or remove some accounts."""
-    #     sql = """SELECT * FROM accounts WHERE user_id = $1"""
-
-    #     results = await self.bot.pool.fetchrow(sql, ctx.author.id) # type: ignore
-
-    #     results: Dict[Any, Any] = dict(results) # type: ignore
-
-    #     if ctx.interaction:
-    #         await ctx.interaction.response.send_modal(AccountLinking(ctx, results))
+        embed.set_footer(text="To add or remove accounts please click the button below")
+        await ctx.send(embed=embed, view=AccountsView(ctx, results, embed))
 
 
 async def setup(bot: Fishie):

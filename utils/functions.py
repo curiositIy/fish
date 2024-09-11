@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+import re
 import sys
 import textwrap
 from io import BytesIO
@@ -357,6 +358,19 @@ async def litterbox(
         "https://litterbox.catbox.moe/resources/internals/api.php", data=data
     ) as resp:
         if resp.status != 200:
-            raise commands.CommandError("File too large.")
+            raise commands.CommandError(f"File too large.")
 
         return await resp.text()
+
+
+def capitalize_text(text):
+    text = text.capitalize()
+
+    pattern = r"(?<=[.!?])\s+(.)"
+
+    def capitalize_match(match):
+        return match.group(0).upper()
+
+    capitalized_text = re.sub(pattern, capitalize_match, text)
+
+    return capitalized_text
