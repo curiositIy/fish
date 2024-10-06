@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from io import BytesIO
-import json
 from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
-import aiohttp
 import discord
 from discord.abc import Messageable
 from discord.ext import commands
 
 from core import Cog
-from utils import fish_owner, greenTick, ReviewsPageSource, Review, ReviewSender, Pager
+from utils import fish_owner, greenTick, AllMsgbleChannels
 
 if TYPE_CHECKING:
     from core import Fishie
@@ -51,13 +48,13 @@ class Owner(Cog):
     async def message(
         self,
         ctx: Context,
-        channel: Optional[Union[Messageable, discord.User]] = commands.CurrentChannel,
+        channel: Optional[Union[AllMsgbleChannels, discord.User]] = None,
         *,
         text: str,
     ):
         """Send a message"""
-        channel = channel or ctx.channel
-        await channel.send(text, allowed_mentions=discord.AllowedMentions.all())
+        channel = channel or ctx.channel # type: ignore
+        await channel.send(text, allowed_mentions=discord.AllowedMentions.all()) # type: ignore
 
         await self._add_reaction(ctx, ctx.message)
 

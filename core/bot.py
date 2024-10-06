@@ -154,7 +154,6 @@ class Fishie(commands.Bot):
             excinfo = f"```py\n{excinfo}\n```"
 
         await self.error_logs.send(content=excinfo, files=files)
-        await self.session.post(url="")
 
     async def on_error(self, event: str, *args: Any, **kwargs: Any) -> None:
         _, error, _ = sys.exc_info()

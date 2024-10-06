@@ -14,6 +14,13 @@ AllChannels: TypeAlias = Union[
     discord.ForumChannel,
     discord.Thread,
 ]
+AllMsgbleChannels: TypeAlias = Union[
+    discord.TextChannel,
+    discord.VoiceChannel,
+    discord.StageChannel,
+    discord.Thread,
+]
+
 DiscordObjects: TypeAlias = Optional[
     Union[
         discord.Message,

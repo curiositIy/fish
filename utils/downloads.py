@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import discord
 import yt_dlp
-
+from discord.ext import commands
 from .errors import DownloadError, InvalidWebsite, VideoIsLive
 from .functions import to_thread, run, litterbox, capitalize_text
 from .regexes import (
@@ -69,9 +69,9 @@ class Downloader:
         }
         self.json_data = {
             "url": self.url,
-            "vQuality": "max",
-            "isAudioOnly": format == "mp3",
-            "vCodec": "h264",
+            "videoQuality": "max",
+            "downloadMode": "audio" if format == "mp3" else "auto",
+            "youtubeVideoCodec": "h264",
             "twitterGif": self.twitterGif,
         }
 
@@ -82,13 +82,14 @@ class Downloader:
         if cobalt_checker(self.url):
             s = await self.ctx.session.post(
                 headers=self.headers,
-                url="https://api.cobalt.tools/api/json",
+                url="https://cobalt.catgirls.one/",
                 json=self.json_data,
             )
+
             data: Dict[Any, Any] = await s.json()
 
             try:
-                # await ctx.send(file=bot.too_big(json.dumps(data, indent=4))) # debug
+                await self.ctx.send(file=self.ctx.bot.too_big(json.dumps(data, indent=4))) # debug
                 async with self.ctx.session.get(url=data["url"]) as body:
                     bData = await body.read()
 
@@ -98,7 +99,6 @@ class Downloader:
                 file = discord.File(
                     BytesIO(bData), filename=f"{self.filename}.{self.format}"
                 )
-
             except Exception as err:
                 err_chan: discord.TextChannel = self.ctx.bot.get_channel(989112775487922237)  # type: ignore
                 _id = secrets.token_urlsafe(5)
@@ -110,10 +110,15 @@ class Downloader:
                 )
                 await self.ctx.bot.log_error(error=err)
                 _err = data.get(
-                    "error",
+                    "text",
                     "Something went wrong, this was sent to the developers, sorry.",
                 )
-                raise DownloadError(f"{capitalize_text(_err)} Error ID: `{_id}`")
+
+                if "service api" in _err:
+                    _err = "Overloading downloads, sorry. Try again later!"
+
+                await self.ctx.send(f"{capitalize_text(_err)} Error ID: `{_id}`")
+                raise commands.NotOwner()
         else:
             file = await self.yt_dlp_download()
 
@@ -202,6 +207,7 @@ class Downloader:
 
     async def download(self):
         files: List[discord.File] = []
+        MVD: None | discord.Message = None
 
         if INSTAGRAM_RE.search(self.url):
             files.append(
@@ -211,10 +217,11 @@ class Downloader:
         elif TWITTER_RE.search(self.url):
             s = await self.ctx.session.post(
                 headers=self.headers,
-                url="https://api.cobalt.tools/api/json",
+                url="https://olly.imput.net/",
                 json=self.json_data,
             )
             data: Dict[Any, Any] = await s.json()
+            
             if data.get("status") == "picker":
                 MVD = await self.ctx.send("Multiple videos detected, downloading.")
                 for pd in data["picker"]:
@@ -234,7 +241,6 @@ class Downloader:
                             BytesIO(bData), filename=f"{self.filename}.{tempformat}"
                         )
                     )
-                    await MVD.delete()
 
             else:
                 files.append(await self._download())
@@ -256,6 +262,9 @@ class Downloader:
                 text += f"{url}\n"
 
             await self.ctx.send(text, ephemeral=self.hidden)
+
+        if MVD:
+            await MVD.delete()
 
         for file in files:
 

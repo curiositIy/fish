@@ -4,7 +4,7 @@ from re import compile as comp
 # fmt: off
 VIDEOS_RE: Pattern[str] = comp(
     r"""
-    (https://(www|vm|vt|m?).?tiktok.com/(@?[a-zA-Z0-9_.]{1,})/([a-zA-Z0-9_.]{1,})/([a-zA-Z0-9_.]{1,})?)?
+    (https://(vt|www|vm|m|vk)?.?tiktok.com/(@?[a-zA-z0-9_.]{1,})?/?(@?[a-zA-z0-9_.]{1,})?/?(@?[a-zA-z0-9_.]{1,})?/)?
     (https://(www.)?instagram.com/(p|tv|reel)/[a-zA-Z0-9-_]{5,})?
     (https?://clips.twitch.tv/[a-zA-Z0-9_-])?
     (https?://(twitter|x).com/[a-zA-Z0-9_]{1,}/status/[0-9]{19})?
@@ -19,7 +19,7 @@ VIDEOS_RE: Pattern[str] = comp(
 )
 
 # sites
-TIKTOK_RE: Pattern[str] = comp(r"https://(www|vm|vt|m?).?tiktok.com/(@?[a-zA-Z0-9_.]{1,})/([a-zA-Z0-9_.]{1,})/([a-zA-Z0-9_.]{1,})?")
+TIKTOK_RE: Pattern[str] = comp(r"https://(vt|www|vm|m|vk)?.?tiktok.com/(@?[a-zA-z0-9_.]{1,})?/?(@?[a-zA-z0-9_.]{1,})?/?(@?[a-zA-z0-9_.]{1,})?/")
 INSTAGRAM_RE: Pattern[str] = comp(r"https://(www.)?instagram.com/(p|tv|reel)/[a-zA-Z0-9-_]{5,}")
 TWITCH_RE: Pattern[str] = comp(r"https?://clips.twitch.tv/[a-zA-Z0-9_-]")
 TWITTER_RE: Pattern[str] = comp(r"https?://(twitter|x)\.com/[a-zA-Z0-9_]{1,}/status/[0-9]{19,}")
